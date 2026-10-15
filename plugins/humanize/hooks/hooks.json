@@ -1,5 +1,5 @@
 {
-  "description": "humanize: block AI buzzwords before a file write, commit, PR, or Slack/Linear post lands",
+  "description": "humanize: block AI buzzwords before a file write, commit, PR, or Slack/Linear post lands. Changed in the ramtoshiya fork to run through uv-managed Python.",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/humanize.py\""
+            "command": "uv run --offline --no-project --managed-python --python '>=3.11' --no-config --exclude-newer '3 days' python \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/humanize.py\""
           }
         ]
       },
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/humanize.py\""
+            "command": "uv run --offline --no-project --managed-python --python '>=3.11' --no-config --exclude-newer '3 days' python \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/humanize.py\""
           }
         ]
       }
