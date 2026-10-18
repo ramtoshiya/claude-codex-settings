@@ -26,7 +26,7 @@ def run_adapter(name, args, workspace="."):
 class HumanizeAgyTest(unittest.TestCase):
     """Test that agy calls reach humanize and always get a decision agy accepts."""
 
-    def test_denies_flagged_text_from_each_agy_tool(self):
+    def test_warns_without_overriding_permissions_for_each_agy_tool(self):
         """Map write, replace, multi-replace, and shell arguments to the text humanize checks."""
         with tempfile.TemporaryDirectory() as tmp:
             notes = Path(tmp, "notes.md")
@@ -58,8 +58,9 @@ class HumanizeAgyTest(unittest.TestCase):
             for name, args, rule in cases:
                 with self.subTest(name):
                     result = run_adapter(name, args, tmp)
-                    self.assertEqual(result["decision"], "deny")
+                    self.assertEqual(result["decision"], "ask")
                     self.assertIn(rule, result["reason"])
+                    self.assertIn("advisory only, call not blocked", result["reason"])
 
     def test_clean_and_failed_checks_defer_to_agy_permissions(self):
         """Answer "ask", because agy denies a call when the hook reply has no decision."""

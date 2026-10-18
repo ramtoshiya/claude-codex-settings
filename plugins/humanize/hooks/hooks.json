@@ -1,5 +1,5 @@
 {
-  "description": "humanize: block AI buzzwords before a file write, commit, PR, or Slack/Linear post lands. Changed in the ramtoshiya fork to run through uv-managed Python.",
+  "description": "humanize: warn about AI buzzwords before a file write, commit, PR, or Slack/Linear post, without blocking it. Changed in the ramtoshiya fork to run through uv-managed Python.",
   "hooks": {
     "PreToolUse": [
       {

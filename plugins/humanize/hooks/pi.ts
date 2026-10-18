@@ -51,8 +51,10 @@ export default function humanize(pi: ExtensionAPI) {
 					if (!stdout.trim()) return done(undefined);
 					try {
 						const output = JSON.parse(stdout).hookSpecificOutput;
-						if (output?.permissionDecision === "deny") {
-							return done({ block: true, reason: output.permissionDecisionReason });
+						if (typeof output?.additionalContext === "string") {
+							if (ctx.hasUI) ctx.ui.notify(output.additionalContext, "warning");
+							pi.sendMessage({ customType: "humanize-warning", content: output.additionalContext, display: false }, { deliverAs: "nextTurn" });
+							return done(undefined);
 						}
 						done(skipped(ctx, "unexpected hook output"));
 					} catch {

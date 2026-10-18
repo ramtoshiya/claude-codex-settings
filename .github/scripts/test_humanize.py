@@ -21,7 +21,14 @@ def run_hook(tool, tool_input, cwd="."):
         check=True,
         text=True,
     ).stdout
-    return json.loads(output)["hookSpecificOutput"]["permissionDecisionReason"] if output else ""
+    if not output:
+        return ""
+    response = json.loads(output)
+    hook_output = response["hookSpecificOutput"]
+    assert "permissionDecision" not in hook_output, response
+    assert hook_output["additionalContext"] == response["systemMessage"], response
+    assert "advisory only, call not blocked" in response["systemMessage"], response
+    return hook_output["additionalContext"]
 
 
 class HumanizeTest(unittest.TestCase):
@@ -54,7 +61,7 @@ class HumanizeTest(unittest.TestCase):
             self.assertEqual(run_hook("Write", {"file_path": path, "content": content}), "")
 
     def test_checks_real_writing(self):
-        """Keep blocking marks in Markdown and code comments."""
+        """Warn about marks in Markdown and code comments without blocking."""
         cases = (
             ("README.md", f"This sentence has a semicolon{SEMICOLON} replace it."),
             ("config.yml", f"# This comment has a semicolon{SEMICOLON} replace it."),
@@ -246,8 +253,8 @@ class HumanizeTest(unittest.TestCase):
         for path, content in cases:
             self.assertEqual(run_hook("Write", {"file_path": path, "content": content}), "")
 
-    def test_keeps_blocking_text_beside_code_references(self):
-        """Keep blocking text semicolons near code-shaped references."""
+    def test_warns_about_text_beside_code_references(self):
+        """Warn about text semicolons near code-shaped references."""
         cases = (
             ("app.php", f"// call $db->begin(){SEMICOLON} then wait{SEMICOLON} retry\n"),
             ("app.js", f"// first do this{SEMICOLON} then that\n"),

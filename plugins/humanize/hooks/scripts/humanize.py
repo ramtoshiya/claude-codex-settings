@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Block AI buzzwords before a write, shell, or tool call lands, so text reads human.
+"""Warn about AI buzzwords before a write, shell, or tool call lands.
 
 Scans markdown whole, code files only in comments and docstrings, shell only in commit and PR text
 including GitHub JSON inputs and body files resolved from the hook working directory
 plus heredoc bodies that cat or tee writes to a file, patches only in added lines, and MCP calls
-only in message fields. Always blocks a few marks and stock words with a plain swap, and flags
+only in message fields. Flags a few marks and stock words with a plain swap, and reports
 common words only when they pile up. En-dash is allowed.
 
 Words draw on Wikipedia "Signs of AI writing": https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
@@ -18,7 +18,7 @@ from collections import namedtuple
 from pathlib import Path
 
 # fmt: off
-# always blocked on any hit, each mapped to a plain swap or a short "drop it" note
+# flagged on any hit, each mapped to a plain swap or a short "drop it" note
 SWAP = {
     "leverage": "use", "utilize": "use", "plethora": "many", "myriad": "many",
     "delve": "look at", "paradigm": "model", "tapestry": "mix", "showcase": "show",
@@ -36,7 +36,7 @@ SWAP = {
     "vibrant": "lively", "game-changing": "big", "cutting-edge": "latest",
 }
 
-# always blocked cliches and filler openers, each mapped to a short fix note
+# flagged cliches and filler openers, each mapped to a short fix note
 PHRASES = [
     (r"ever[- ]evolving", "drop 'ever-evolving'"),
     (r"fast[- ]paced world", "drop 'fast-paced world'"),
@@ -449,7 +449,7 @@ def context(finding, width=60):
 
 
 def format_findings(findings, piles):
-    """Format all findings into one actionable denial message."""
+    """Format all findings into one advisory warning."""
     lines = [
         f"- {finding.rule} at {location(finding)}, {finding.replacement}: {context(finding)}" for finding in findings
     ]
@@ -457,21 +457,22 @@ def format_findings(findings, piles):
         shown = ", ".join(location(finding) for finding in matches[:5])
         more = f", +{len(matches) - 5} more" if len(matches) > 5 else ""
         lines.append(f"- {rule} used {len(matches)} times at {shown}{more}, {matches[0].replacement}")
-    return "humanize:\n" + "\n".join(lines)
+    return "humanize warning (advisory only, call not blocked):\n" + "\n".join(lines)
 
 
 data = json.load(sys.stdin)
 findings, piles = detect(extract(data.get("tool_name", ""), data.get("tool_input") or {}, data.get("cwd", ".")))
 
 if findings or piles:
+    warning = format_findings(findings, piles)
     print(
         json.dumps(
             {
+                "systemMessage": warning,
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": format_findings(findings, piles),
-                }
+                    "additionalContext": warning,
+                },
             }
         )
     )

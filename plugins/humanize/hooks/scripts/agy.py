@@ -55,7 +55,7 @@ def decide(payload):
         if not result.stdout.strip():
             return {"decision": "ask"}
         output = json.loads(result.stdout)["hookSpecificOutput"]
-        return {"decision": "deny", "reason": output["permissionDecisionReason"]}
+        return {"decision": "ask", "reason": output["additionalContext"]}
     except Exception as error:
         return {"decision": "ask", "reason": "humanize could not check this call: " + str(error)}
 

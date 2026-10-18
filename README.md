@@ -113,20 +113,20 @@ Run `/simplify` to review your staged or committed diff across four angles (reus
 </details>
 
 <details>
-<summary><strong>humanize</strong> - Write naturally and block AI buzzwords in files, commits, and messages</summary>
+<summary><strong>humanize</strong> - Write naturally and warn about AI buzzwords without blocking files, commits, or messages</summary>
 
 | Claude Code                                      | Codex CLI                                   | Gemini CLI                                            |
 | ------------------------------------------------ | ------------------------------------------- | ----------------------------------------------------- |
 | `claude plugin install humanize@claude-settings` | `codex plugin add humanize@claude-settings` | `gemini extensions install --path ./plugins/humanize` |
 
-Before a Write or Edit saves, humanize scans the new text and blocks whatever reads like a machine wrote it, each hit paired with a plain-word swap. It reads Markdown files whole and checks comments and docstrings in code files while skipping source code and recognized code-shaped references:
+Before a Write or Edit saves, humanize scans the new text and warns about matched wording, each hit paired with a plain-word swap. The call proceeds without requiring a rewrite. It reads Markdown files whole and checks comments and docstrings in code files while skipping source code and recognized code-shaped references:
 
 - **3 marks**: the em-dash, section sign, and stray semicolon (the en-dash stays)
 - **53 stock words** like `leverage`, `seamlessly`, `vibrant`, `game-changing`, each mapped to a plain swap
 - **16 openers and cliches** like `in conclusion`, `a testament to`, `aims to bridge`
 - **10 pile-up words** like `crucial` or `significant`, flagged at 3+ uses in one write
 
-Runs on Claude Code and Gemini. Unlike a markdown rule the model can ignore, the hook checks every Write or Edit and blocks each match until it is replaced. The word list draws on [Wikipedia's "Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+The shared hook reports advisory warnings to Claude Code and Codex without changing their permission decisions. The Pi adapter shows a warning and passes the findings to the model, including in non-interactive mode. The agy adapter returns the warning while deferring to agy's normal permissions. The word list draws on [Wikipedia's "Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
 
 **Skills** (ZIP for claude.ai, ChatGPT, Claude Code, Cursor, Codex, VS Code):
 
@@ -136,7 +136,7 @@ Runs on Claude Code and Gemini. Unlike a markdown rule the model can ignore, the
 
 **Hooks:**
 
-- [`humanize.py`](./plugins/humanize/hooks/scripts/humanize.py) - blocks matched marks, buzzwords, and cliches before a Write or Edit lands
+- [`humanize.py`](./plugins/humanize/hooks/scripts/humanize.py) - warns about matched marks, buzzwords, and cliches without blocking the call
 
 </details>
 

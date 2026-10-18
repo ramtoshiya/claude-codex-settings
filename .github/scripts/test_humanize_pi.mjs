@@ -10,7 +10,11 @@ import humanize from "../../plugins/humanize/hooks/pi.ts";
 
 const SEMICOLON = String.fromCharCode(59);
 let handler;
-humanize({ on(event, callback) { if (event === "tool_call") handler = callback; } });
+const messages = [];
+humanize({
+	on(event, callback) { if (event === "tool_call") handler = callback; },
+	sendMessage(message, options) { messages.push([message, options]); },
+});
 
 function fixture(t) {
 	const cwd = mkdtempSync(join(tmpdir(), "humanize-pi-"));
@@ -22,7 +26,7 @@ function call(cwd, toolName, input, ui) {
 	return handler({ type: "tool_call", toolName, toolCallId: "humanize-test", input }, { cwd, hasUI: !!ui, ui });
 }
 
-test("blocks flagged text from Pi write, edit, and bash calls", async (t) => {
+test("warns without blocking Pi write, edit, and bash calls, including without a UI", async (t) => {
 	const cwd = fixture(t);
 	writeFileSync(join(cwd, "notes.md"), "one\ntwo\n");
 	const cases = [
@@ -30,12 +34,28 @@ test("blocks flagged text from Pi write, edit, and bash calls", async (t) => {
 		["edit", { path: "@notes.md", edits: [{ oldText: "two", newText: "we leverage it" }] }, /"leverage"/],
 		["bash", { command: 'git commit -m "Leverage the cache"' }, /"leverage"/],
 	];
+	const warnings = [];
+	const ui = { notify: (message, level) => warnings.push([message, level]) };
 	for (const [toolName, input, reason] of cases) {
-		const result = await call(cwd, toolName, input);
-		assert.equal(result?.block, true, toolName);
-		assert.match(result.reason, reason);
+		for (const withUI of [true, false]) {
+			messages.length = 0;
+			warnings.length = 0;
+			assert.equal(await call(cwd, toolName, input, withUI ? ui : undefined), undefined, toolName);
+			assert.equal(messages.length, 1);
+			assert.match(messages[0][0].content, reason);
+			assert.equal(messages[0][1].deliverAs, "nextTurn");
+			assert.equal(warnings.length, withUI ? 1 : 0);
+			if (withUI) {
+				assert.match(warnings[0][0], reason);
+				assert.equal(warnings[0][1], "warning");
+			}
+		}
 	}
-	assert.equal(await call(cwd, "write", { path: "draft.md", content: "Plain text." }), undefined);
+	messages.length = 0;
+	warnings.length = 0;
+	assert.equal(await call(cwd, "write", { path: "draft.md", content: "Plain text." }, ui), undefined);
+	assert.equal(messages.length, 0);
+	assert.equal(warnings.length, 0);
 });
 
 test("lets the call through with a warning when the check cannot run", async (t) => {
