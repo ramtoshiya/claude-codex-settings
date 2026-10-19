@@ -1,6 +1,6 @@
 ---
 name: humanize
-description: This skill should be used when writing or revising text, including responses, documentation, comments, emails, posts, reports, and messages, especially when the user asks to "humanize", "write naturally", "remove AI tone", or "avoid AI writing".
+description: This skill should be used before creating or modifying any file, including code, configuration, documentation, and comments, or preparing or publishing commit messages, pull requests, issues, emails, or posts. Also use it when the user explicitly asks to "humanize", "write naturally", "remove AI tone", or "avoid AI writing". Do not invoke it for ordinary chat, explanations, research, or read-only reviews and exploration unless the task also involves a file change, publication, or an explicit request to use this skill.
 ---
 
 # Humanize

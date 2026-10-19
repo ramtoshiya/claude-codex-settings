@@ -119,6 +119,8 @@ Run `/simplify` to review your staged or committed diff across four angles (reus
 | ------------------------------------------------ | ------------------------------------------- | ----------------------------------------------------- |
 | `claude plugin install humanize@claude-settings` | `codex plugin add humanize@claude-settings` | `gemini extensions install --path ./plugins/humanize` |
 
+The skill applies when creating or modifying any file or preparing content for publication, including commits and pull requests. Ordinary chat, research, explanations, and read-only reviews do not invoke it unless you explicitly request the skill.
+
 Before a Write or Edit saves, humanize scans the new text and warns about matched wording, each hit paired with a plain-word swap. The call proceeds without requiring a rewrite. It reads Markdown files whole and checks comments and docstrings in code files while skipping source code and recognized code-shaped references:
 
 - **3 marks**: the em-dash, section sign, and stray semicolon (the en-dash stays)
