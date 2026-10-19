@@ -1,0 +1,38 @@
+schema_version: '1.1'
+name: negative-hook-config-research
+description: A delegated research assignment must not inherit its parent workflow's later test-authoring scope.
+tags: [negative, replay, regression, research, delegated-scope]
+execution:
+  prompt: |
+    You own only the delegated read-only research assignment in a larger hook
+    configuration implementation workflow. The parent may later change behavior
+    and author regression tests. Neither implementation nor test authoring is
+    part of your assignment.
+
+    Determine whether configuration inspection can accidentally send events.
+    First read src/commands.js and src/hook-options.js, then read
+    test/hook-options.test.js and test/commands.test.js to corroborate the behavior.
+    Explain defaults, accepted delay values, and whether resolving options,
+    printing options, or disabling delivery schedules work. Recommend commands
+    for the parent's later validation pass. Return research findings only,
+    without editing files.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: no-test-audit-anywhere-in-run
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 0
+    max: 0
+    arm: both
+  - name: hook-validation-test-evidence-read
+    type: tool_used
+    tool: Read
+    input_match: '"file_path"\s*:\s*"(?:[^"]*/)?test/hook-options\.test\.js"'
+    min: 1
+    arm: both

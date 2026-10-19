@@ -1,0 +1,23 @@
+schema_version: '1.1'
+name: positive-read-only-test-seam-audit
+description: An audit of test-only production seams is test-quality work even without edits.
+tags: [positive, audit, read-only, test-seams]
+execution:
+  prompt: |
+    Audit production seams that exist only to support tests in this package.
+    Start with normalizeDelayForTests, trace every caller, and compare its test
+    with the public resolveHookOptions rejection contract. Assess whether the
+    seam and its test earn their maintenance cost and what stronger proof would
+    remain if removed. Return findings only. Do not change or execute anything.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1

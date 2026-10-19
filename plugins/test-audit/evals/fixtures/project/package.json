@@ -1,0 +1,11 @@
+{
+  "name": "dispatch-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Small dispatch command used by synthetic trigger evaluation cases.",
+  "engines": { "node": ">=20" },
+  "files": ["src/", "bin/"],
+  "bin": { "dispatch-fixture": "bin/dispatch.js" },
+  "scripts": { "test": "node --test test/*.test.js" }
+}

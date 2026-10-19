@@ -1,0 +1,23 @@
+schema_version: '1.1'
+name: positive-fix-bug-with-regression
+description: A source repair with a required regression test includes test authoring.
+tags: [positive, authoring, regression]
+execution:
+  prompt: |
+    Fix the lifecycle bug where enqueue, pause before delivery, then resume
+    leaves the event stuck. Add one focused regression test at the lifecycle
+    boundary using the existing deterministic clock. Demonstrate that the test
+    fails on the old implementation for the intended reason, then repair the
+    timer state and run the affected suite. Preserve close and manual flush.
+  max_turns: 24
+  timeout_seconds: 360
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1

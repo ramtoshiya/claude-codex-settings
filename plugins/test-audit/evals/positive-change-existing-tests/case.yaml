@@ -1,0 +1,22 @@
+schema_version: '1.1'
+name: positive-change-existing-tests
+description: Strengthening assertions in an existing test is test authoring work.
+tags: [positive, authoring, modification]
+execution:
+  prompt: |
+    Strengthen the existing options-command test in test/commands.test.js so it
+    also checks that the caller's frozen input is unchanged and that explicit
+    enabled:false and mode:'manual' survive the command boundary. Modify the
+    existing test rather than adding a near-duplicate. Run the focused suite.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1

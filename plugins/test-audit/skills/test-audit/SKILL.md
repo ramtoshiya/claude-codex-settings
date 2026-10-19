@@ -1,17 +1,17 @@
 ---
 name: test-audit
-description: This skill should be used when the user asks to "write a test", "review these tests", "audit tests", "prune low-value tests", or "find duplicate tests", and whenever writing, changing, reviewing, or sweeping tests. Gates new tests and audits low-value, implementation-coupled, or duplicative tests and the test-only production seams they demand.
+description: This skill should be used when the task is to "write a test", "change tests", "review test quality", "audit tests", "prune low-value tests", or "find duplicate tests". Apply automatically when authoring or modifying tests, or when the requested deliverable evaluates test quality, duplication, brittleness, or test-only production seams. Use the current task or delegated assignment, not a parent workflow's later implementation phase. Reading tests as evidence for research, source review, diagnosis, packaging, validation planning, or future coverage recommendations is not a test-quality audit. Do not invoke merely to inspect or run tests, explain behavior, or recommend tests without authoring them or assessing existing test quality.
 ---
 
 # Test Audit
 
-Three modes, one value bar. Authoring mode gates every new or changed test at
-write time. Audit mode runs focused sweeps of tests that re-assert source,
-duplicate stronger proof, couple behavior to implementation, or keep test-only
-production seams alive. Continue broad audits as separate coherent follow-up
-PRs; optimize for confidence, not deletion count. Campaign mode prunes one
-whole subsystem's test surface (every test file a plugin or core area owns);
-before starting one, read [references/campaign.md](references/campaign.md).
+Three modes, one value bar. Authoring mode gates each test being added or
+changed without expanding into an existing-suite audit. Audit mode evaluates
+test quality within the requested scope, including read-only reviews. Tests
+read as evidence for another task do not start an audit or cleanup campaign.
+Campaign mode prunes one whole subsystem's test surface (every test file a
+plugin or core area owns). Before starting one, read
+[references/campaign.md](references/campaign.md).
 
 ## Authoring gate
 

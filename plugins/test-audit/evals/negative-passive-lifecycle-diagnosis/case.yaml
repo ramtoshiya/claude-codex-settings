@@ -1,0 +1,33 @@
+schema_version: '1.1'
+name: negative-passive-lifecycle-diagnosis
+description: Passive diagnosis and future coverage recommendations are not an existing-suite audit.
+tags: [negative, replay, regression, diagnosis]
+execution:
+  prompt: |
+    Diagnose a lifecycle report without editing any source or tests. An event is
+    queued, delivery is paused before the timer fires, and delivery is resumed,
+    but the event never arrives. Start with src/lifecycle.js, then read
+    test/lifecycle.test.js and test/support/clock.js as evidence. Explain the
+    state transition that could cause this and recommend focused regression
+    scenarios for a future implementation task. Do not implement the fix or the
+    proposed tests in this task.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: no-test-audit-anywhere-in-run
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 0
+    max: 0
+    arm: both
+  - name: lifecycle-test-evidence-read
+    type: tool_used
+    tool: Read
+    input_match: '"file_path"\s*:\s*"(?:[^"]*/)?test/lifecycle\.test\.js"'
+    min: 1
+    arm: both

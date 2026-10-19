@@ -1,0 +1,31 @@
+schema_version: '1.1'
+name: negative-command-discovery
+description: Read-only validation planning for command discovery is not test-quality work.
+tags: [negative, discovery, validation]
+execution:
+  prompt: |
+    Validate command discovery by reading package.json, bin/dispatch.js,
+    src/commands.js, and test/commands.test.js. Trace how a terminal user finds
+    the send and options commands and how package metadata reaches the entry
+    point. Report broken links if any and list the local commands someone could
+    run to confirm discovery. Do not execute commands or change files.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: no-test-audit-anywhere-in-run
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 0
+    max: 0
+    arm: both
+  - name: command-discovery-evidence-read
+    type: tool_used
+    tool: Read
+    input_match: '"file_path"\s*:\s*"(?:[^"]*/)?test/commands\.test\.js"'
+    min: 1
+    arm: both

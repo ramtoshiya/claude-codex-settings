@@ -1073,6 +1073,7 @@ npx skills add https://github.com/fcakyon/claude-codex-settings/tree/main/plugin
 
 The test review playbook from [openclaw/openclaw](https://github.com/openclaw/openclaw), adapted to work in any repository.
 
+- Runs automatically for test authoring and test-quality audits, including read-only audits. Reading tests for research, diagnosis, or validation planning does not invoke it.
 - Before a new test lands, it must name the bug it catches and why existing tests miss it.
 - Finds tests that copy source, mock the behavior they assert, or repeat a stronger test.
 - Deletes test-only exports and dead code once their last test is gone.

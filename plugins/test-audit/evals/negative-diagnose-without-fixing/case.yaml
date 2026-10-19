@@ -1,0 +1,31 @@
+schema_version: '1.1'
+name: negative-diagnose-without-fixing
+description: Investigating a reported failure does not authorize test authoring or quality review.
+tags: [negative, diagnosis]
+execution:
+  prompt: |
+    A caller reports that runCommand('send', { delayMs: '25', value: 'hello' },
+    write) throws instead of delivering. Inspect src/commands.js,
+    src/hook-options.js, and the existing hook-options tests. Explain the
+    immediate cause and whether the caller supplied a supported value. Do not
+    fix the implementation, change tests, or run commands.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: no-test-audit-anywhere-in-run
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 0
+    max: 0
+    arm: both
+  - name: validation-evidence-read
+    type: tool_used
+    tool: Read
+    input_match: '"file_path"\s*:\s*"(?:[^"]*/)?test/hook-options\.test\.js"'
+    min: 1
+    arm: both

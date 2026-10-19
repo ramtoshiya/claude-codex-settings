@@ -1,0 +1,25 @@
+schema_version: '1.1'
+name: positive-subsystem-campaign-plan
+description: Planning a subsystem-wide quality and pruning campaign requires audit mode.
+tags: [positive, campaign, planning]
+execution:
+  prompt: |
+    Plan a test-quality cleanup campaign across the dispatch subsystem's entire
+    test surface: lifecycle, hook options, command boundary, and packaging.
+    Inspect all tests and their owners. Identify duplicate contracts, weak proof,
+    test-only production seams, and independent package checks worth retaining.
+    Give one coherent first pruning batch with candidate evidence and validation
+    commands. This deliverable is an audit and pruning plan, not future feature
+    coverage recommendations. Do not edit files or run commands yet.
+  max_turns: 24
+  timeout_seconds: 360
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "release-notes",
+    "description": "Summarize user-visible changes when release notes are the requested deliverable. Do not activate for incidental version inspection.",
+    "user_invocable": true,
+    "automatic_selection": true
+  },
+  {
+    "name": "bundle-report",
+    "description": "Produce a package inventory when the user requests a distributable contents report.",
+    "user_invocable": true,
+    "automatic_selection": true
+  }
+]

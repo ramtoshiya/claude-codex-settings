@@ -1,0 +1,23 @@
+schema_version: '1.1'
+name: positive-implement-coverage
+description: Implementing coverage, rather than merely recommending it, requires authoring mode.
+tags: [positive, authoring, coverage]
+execution:
+  prompt: |
+    Implement missing behavioral coverage for events queued while the lifecycle
+    is already paused. Prove no event is delivered during the pause and that
+    resume delivers those events once, in order. Extend the existing lifecycle
+    suite using its clock helper and avoid duplicating the existing normal batch
+    test. Leave source behavior unchanged and run the lifecycle tests.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1

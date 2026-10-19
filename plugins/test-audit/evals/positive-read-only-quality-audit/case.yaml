@@ -1,0 +1,23 @@
+schema_version: '1.1'
+name: positive-read-only-quality-audit
+description: Read-only restrictions do not exclude an explicitly requested test-quality audit.
+tags: [positive, audit, read-only]
+execution:
+  prompt: |
+    Perform a read-only test-quality audit of test/hook-options.test.js. Assess
+    whether each test guards an independent behavior, duplicates a stronger
+    boundary, or adds brittle maintenance cost. Read the production owners and
+    callers before judging the tests. Report concrete retain, consolidate, or
+    remove candidates with evidence. Do not edit files or run commands.
+  max_turns: 12
+  timeout_seconds: 180
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: Work directly without delegating. Use local workspace evidence only. Do not install dependencies, access the network, or commit.
+context:
+  scaffold_script: setup.sh
+graders:
+  - name: automatically-selected-test-audit
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?test-audit"'
+    min: 1
