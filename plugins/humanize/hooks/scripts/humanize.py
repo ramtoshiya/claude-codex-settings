@@ -360,7 +360,11 @@ def patch_regions(patch):
     out = []
     pattern = r"^\*\*\* (Add|Update) File: (.+?)\s*$(.*?)(?=^\*\*\* |\Z)"
     for action, path, block in re.findall(pattern, patch, re.DOTALL | re.MULTILINE):
-        out += apply_patch_file(path, action, block)
+        try:
+            out += apply_patch_file(path, action, block)
+        except (OSError, ValueError):
+            # The host validates patches. Skip files we cannot reconstruct for scanning.
+            continue
     return out
 
 

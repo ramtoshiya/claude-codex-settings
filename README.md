@@ -128,7 +128,7 @@ Before a Write or Edit saves, humanize scans the new text and warns about matche
 - **16 openers and cliches** like `in conclusion`, `a testament to`, `aims to bridge`
 - **10 pile-up words** like `crucial` or `significant`, flagged at 3+ uses in one write
 
-The shared hook reports advisory warnings to Claude Code and Codex without changing their permission decisions. The Pi adapter shows a warning and passes the findings to the model, including in non-interactive mode. The agy adapter returns the warning while deferring to agy's normal permissions. The word list draws on [Wikipedia's "Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+The shared hook reports advisory warnings to Claude Code and Codex without changing their permission decisions. For Codex patches, it skips files it cannot read or reconstruct and checks the remaining files. Codex reports any patch errors. The Pi adapter shows a warning and passes the findings to the model, including in non-interactive mode. The agy adapter returns the warning while deferring to agy's normal permissions. The word list draws on [Wikipedia's "Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
 
 **Skills** (ZIP for claude.ai, ChatGPT, Claude Code, Cursor, Codex, VS Code):
 

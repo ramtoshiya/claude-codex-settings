@@ -105,6 +105,22 @@ class HumanizeTest(unittest.TestCase):
             self.assertEqual(run_hook("apply_patch", {"command": code_patch}), "")
             self.assertIn(f"{path}:5:4", run_hook("apply_patch", {"command": prose_patch}))
 
+    def test_skips_unreadable_patch_blocks_and_checks_remaining_files(self):
+        """Leave invalid patches to the host and still scan readable files."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.rs"
+            path.write_text("// Current comment.\n")
+            for target in (path, Path(directory) / "missing.rs"):
+                with self.subTest(target=target.name):
+                    patch = (
+                        f"*** Begin Patch\n*** Update File: {target}\n@@\n"
+                        "-// Missing comment.\n+// New comment.\n"
+                        "*** Add File: README.md\n+We leverage tools.\n*** End Patch"
+                    )
+                    warning = run_hook("apply_patch", {"command": patch}, directory)
+                    self.assertIn('"leverage" at README.md:1:4', warning)
+                    self.assertNotIn(str(target), warning)
+
     def test_reports_each_file_location_with_context(self):
         """Report every file finding with line, column, fix, and context."""
         reason = run_hook(
