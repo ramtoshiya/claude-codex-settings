@@ -1,6 +1,6 @@
 ---
 name: humanize
-description: This skill should be used when writing files, code, configuration, or publishable text, or asked to "humanize" or "remove AI tone". New writing from facts or notes stays here in any language. Only for rewriting supplied Korean text, use available humanize-korean instead, regardless of instruction language. For supplied bilingual text, use humanize-korean for Korean and this skill for English. Keep code/config changes here. Skip ordinary chat, explanations, research, read-only reviews, translation-only and spelling-only unless also writing files, publishing, or humanizing.
+description: This skill should be used before code/config file changes, or writing/editing English files, commits, pull requests, emails, posts, and published thread replies. Use for English "humanize" requests. New Korean text and Korean source editing belong only to humanize-korean, regardless of instruction language. For mixed Korean/English writing or rewriting, invoke BOTH skills together before drafting, one per language. Skip private chat, explanations, read-only research, translation-only and spelling-only unless also publishing, writing files, or explicitly humanizing.
 ---
 
 # Humanize
@@ -11,9 +11,9 @@ These patterns are warning signs, not proof of AI authorship. Fix the underlying
 
 ## Language routing {:#language-routing}
 
-Choose by the supplied text being edited, not the language of the user's instructions. When stylistically rewriting supplied Korean text, invoke the available `humanize-korean` skill and follow its workflow instead of applying these English writing patterns to Korean. For supplied mixed Korean/English text, use that skill for the Korean passages and this skill for the English passages, preserving each passage's language and shared facts.
+Choose by the source text for editing and the intended output language for new writing, not the language of the user's instructions. Use the available `humanize-korean` skill for Korean text, including new posts, published thread replies, emails, documentation, and commit messages without an explicit rewriting request. That skill chooses its publication or source-editing workflow. Do not apply these English patterns to Korean or ask the Korean skill to delegate English text back to itself.
 
-Use the registered skill name shown by the host, which may include a plugin prefix. If `humanize-korean` is unavailable, report that limitation rather than claiming its workflow ran. New writing from facts, notes, or requirements stays here in any language. This handoff does not cover code/configuration changes, translation-only, or spelling-only requests. Keep the existing task boundaries for those requests.
+For bilingual text, invoke both skills for their own language, preserving shared facts and each passage's language. Use the host's registered skill names, which may include plugin prefixes. If a required skill is unavailable, report that limitation rather than claiming its workflow ran. Code/configuration-only changes stay here, but route Korean user-facing text inside those files to the Korean skill. Ordinary private conversation, read-only research, translation-only, and spelling-only requests remain outside automatic writing treatment unless they also involve publication, file writing, or explicit humanization.
 
 ## Rewrite method
 
