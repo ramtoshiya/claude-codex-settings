@@ -13,7 +13,7 @@
       "name": "humanize",
       "source": "./plugins/humanize",
       "description": "Write naturally and warn about AI buzzwords without blocking files, commits, or messages.",
-      "version": "1.2.9",
+      "version": "1.2.10",
       "license": "Apache-2.0"
     },
     {
