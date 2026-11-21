@@ -91,7 +91,8 @@ MESSAGE_KEYS = {"body", "text", "markdown_text", "content", "comment", "message"
 TEXT_KEYS = MESSAGE_KEYS | {"description", "title", "subject", "note", "summary", "richtext", "rich_text"}
 
 MD_EXT = {".md", ".markdown", ".mdx"}
-HASH_EXT = {".py", ".sh", ".bash", ".zsh", ".rb", ".yaml", ".yml", ".toml"}
+SHELL_EXT = {".sh", ".bash", ".zsh"}
+HASH_EXT = {".py", ".rb", ".yaml", ".yml", ".toml"} | SHELL_EXT
 C_EXT = {".js", ".ts", ".jsx", ".tsx", ".c", ".cc", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".css", ".scss", ".swift", ".kt", ".php"}
 # fmt: on
 
@@ -152,7 +153,7 @@ def code_refs(text, ext):
     return text
 
 
-def hash_comments(text):
+def hash_comments(text, ext=""):
     """Mask everything except docstrings and quote-aware hash comments."""
     keep = [False] * len(text)
     for pattern in (r'^[ \t]*[rbuRBU]*""".*?"""', r"^[ \t]*[rbuRBU]*'''.*?'''"):
@@ -172,7 +173,7 @@ def hash_comments(text):
                     quote = None
             elif char in "\"'":
                 quote = char
-            elif char == "#":
+            elif char == "#" and (ext not in SHELL_EXT or i == 0 or line[i - 1] in " \t|&;()<>"):
                 keep[offset + i : offset + len(line)] = [True] * (len(line) - i)
                 break
         offset += len(line)
@@ -215,7 +216,7 @@ def checked(path, text, selected=None):
     if ext in MD_EXT:
         text = md_text(text)
     elif ext in HASH_EXT:
-        text = code_refs(md_text(hash_comments(text)), ext)
+        text = code_refs(md_text(hash_comments(text, ext)), ext)
     elif ext in C_EXT:
         text = code_refs(md_text(c_comments(text)), ext)
     else:
@@ -326,11 +327,11 @@ def apply_edits(path, edits):
     return checked(path, text, selected)
 
 
-def apply_patch_file(path, action, block):
-    """Apply one patch block in memory and select only added text."""
+def apply_patch_file(path, action, block, target):
+    """Apply one patch block to the file at path in memory and select only added text, judged as target."""
     if action == "Add":
         text = "\n".join(line[1:] for line in block.splitlines() if line.startswith("+"))
-        return checked(path, text + ("\n" if block.endswith("\n") else ""))
+        return checked(target, text + ("\n" if block.endswith("\n") else ""))
 
     original = Path(path).read_text()
     parts, selected = [], []
@@ -352,16 +353,17 @@ def apply_patch_file(path, action, block):
         cursor = start + len(old)
     parts.append(original[cursor:])
     selected += [False] * (len(original) - cursor)
-    return checked(path, "".join(parts), selected)
+    return checked(target, "".join(parts), selected)
 
 
 def patch_regions(patch):
     """Return source-preserving regions from a Codex patch envelope."""
     out = []
-    pattern = r"^\*\*\* (Add|Update) File: (.+?)\s*$(.*?)(?=^\*\*\* |\Z)"
-    for action, path, block in re.findall(pattern, patch, re.DOTALL | re.MULTILINE):
+    # a moved file is read from its Update File path and judged by its Move to path
+    pattern = r"^\*\*\* (Add|Update) File: (.+?)\s*$(?:\n\*\*\* Move to: ([^\n]+?)[ \t]*$)?(.*?)(?=^\*\*\* |\Z)"
+    for action, path, moved, block in re.findall(pattern, patch, re.DOTALL | re.MULTILINE):
         try:
-            out += apply_patch_file(path, action, block)
+            out += apply_patch_file(path, action, block, moved or path)
         except (OSError, ValueError):
             # The host validates patches. Skip files we cannot reconstruct for scanning.
             continue
@@ -383,9 +385,7 @@ def mcp_text(obj):
 
 def extract(tool, tool_input, cwd="."):
     """Return source-preserving regions for a tool call."""
-    command = tool_input.get("command", tool_input.get("cmd", ""))
-    if isinstance(command, list):  # Codex sends the shell tool an argv array, Claude Code a string
-        command = " ".join(str(c) for c in command)
+    command = tool_input.get("command", "")
     if tool.startswith("mcp__"):
         namespace, name = tool.split("__", 2)[1:]
         server = name.split("_", 1)[0] if namespace == "codex_apps" else namespace.removeprefix("claude_ai_")
@@ -394,7 +394,7 @@ def extract(tool, tool_input, cwd="."):
             kind = "message" if field in MESSAGE_KEYS else field.replace("_", " ")
             regions.append(Region(f"{server.replace('_', ' ').title()} {kind}", md_text(text)))
         return regions
-    if tool in {"Bash", "exec_command"}:
+    if tool == "Bash":
         return [Region(source, md_text(text)) for source, text in bash_text(command, cwd)] + heredoc_writes(command)
     if tool == "apply_patch":
         return patch_regions(command)

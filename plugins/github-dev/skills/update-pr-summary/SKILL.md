@@ -6,7 +6,8 @@ description: This skill should be used when user asks to "update PR summary", "u
 # Update PR Summary
 
 Update a PR title and body to describe the final change and evidence. Treat extra invocation
-text as the PR reference and any requested corrections.
+text as the PR reference and any requested corrections. For issue title/body edits, use
+[create-issue](../create-issue/SKILL.md).
 
 1. Read repository guidance and fetch the current body before editing:
    `gh pr view <pr> --json title,body,baseRefName,headRefName,url`.
@@ -19,7 +20,8 @@ text as the PR reference and any requested corrections.
    user asks to remove them. Rewrite stale claims and titles around the final scope.
 4. Save the exact body to a temporary file outside the repo. Re-read the remote body just
    before writing. If it changed, incorporate those edits rather than overwriting them.
-   Apply with `gh pr edit <pr> --title "..." --body-file <path>`.
+   Apply with `gh pr edit <pr> --title "..." --body-file <path>`, adding `--attach <path>`
+   (`gh >= 2.99.0`) for any new Before/After visuals or figures referenced inline in the body.
 5. Read back `title,body,url` and compare with the intended edit. Verify that preserved content,
    fences, tables, and links survived. Open the PR to check media rendering when relevant.
    Report the PR URL and any remaining evidence or upload gap.

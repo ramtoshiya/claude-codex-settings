@@ -1,8 +1,8 @@
 # claude-settings
 
-> `AGENTS.md` and `GEMINI.md` are symlinks to this file for Codex CLI and Gemini CLI compatibility.
+> `AGENTS.md` is a symlink to this file for Codex, Cursor, and Antigravity CLI.
 
-Multi-tool plugin marketplace. Each plugin under `plugins/` is independently installable on Claude Code, Codex CLI, Gemini CLI, and Cursor.
+Multi-tool plugin marketplace. Plugins under `plugins/` support Claude Code, Codex CLI, and Cursor; plugins with skills or MCP servers also support Antigravity CLI.
 
 ## Repo Structure
 
@@ -10,13 +10,15 @@ Multi-tool plugin marketplace. Each plugin under `plugins/` is independently ins
 claude-settings/
   CLAUDE.md                              # this file (repo dev guide)
   AGENTS.md -> CLAUDE.md                 # Codex CLI reads this
-  GEMINI.md -> CLAUDE.md                 # Gemini CLI reads this
   .claude/CLAUDE.md                      # user-facing global config (synced to ~/.claude/CLAUDE.md)
   .claude/settings.json                  # Claude Code settings
   .claude-plugin/marketplace.json        # Claude Code marketplace
   .agents/plugins/marketplace.json       # Codex CLI marketplace
   .cursor-plugin/marketplace.json        # Cursor marketplace
   .codex/config.toml                     # Codex CLI config
+  .gemini/
+    config/config.json                   # Antigravity enabled plugins
+    antigravity-cli/settings.json        # Antigravity CLI defaults and permissions
   .github/scripts/                       # repo maintenance scripts
     _helpers.sh                          # shared sync/zip functions
     sync-<vendor>-skills.sh              # per-vendor skill sync
@@ -28,11 +30,11 @@ claude-settings/
       .claude-plugin/plugin.json         # Claude Code manifest
       .codex-plugin/plugin.json          # Codex CLI manifest
       .cursor-plugin/plugin.json         # Cursor manifest
-      gemini-extension.json              # Gemini CLI manifest
+      .antigravity-plugin/plugin.json    # Antigravity metadata for skill/MCP bundles
       skills/<skill>/SKILL.md            # universal across all tools
-      agents/<agent>.md                  # Claude Code + Gemini + Cursor
-      hooks/hooks.json + scripts/        # Claude Code + Codex CLI + Gemini
-      commands/<cmd>.md                  # Claude Code only
+      agents/<agent>.md                  # Claude Code + Cursor
+      hooks/hooks.json + scripts/        # Claude Code + Codex CLI, converted for Antigravity
+      commands/<cmd>.md                  # Claude Code + Cursor
       output-styles/<style>.md           # Claude Code only
 ```
 
@@ -40,22 +42,22 @@ claude-settings/
 
 ### Plugin Manifests
 
-Each plugin has 4 manifest files. Claude Code manifest is the source of truth; others are copies or subsets.
+Claude Code metadata is the source of truth. Codex and Cursor keep compatibility manifests; plugins with skills or MCP servers also have generated Antigravity metadata.
 
 | Tool        | Path                                     | Format                                                                  |
 | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
 | Claude Code | `.claude-plugin/plugin.json`             | JSON: name, version, description, author, homepage, repository, license |
 | Codex CLI   | `.codex-plugin/plugin.json`              | JSON: same fields as Claude Code                                        |
 | Cursor      | `.cursor-plugin/plugin.json`             | JSON: same fields as Claude Code                                        |
-| Gemini CLI  | `gemini-extension.json` (at plugin root) | JSON: name, version, description only                                   |
+| Antigravity CLI  | `.antigravity-plugin/plugin.json` | JSON: native schema and shared metadata                                   |
 
 Docs:
 
 - Claude Code: https://code.claude.com/docs/en/plugins-reference
-- Codex CLI: https://developers.openai.com/codex/plugins/build/
+- Codex CLI: https://developers.openai.com/plugins/build/plugins
 - Codex CLI hooks: https://learn.chatgpt.com/docs/hooks
 - Cursor: https://cursor.com/docs/reference/plugins
-- Gemini CLI: https://geminicli.com/docs/extensions/reference/
+- Antigravity CLI: https://antigravity.google/docs/plugins
 - AGENTS.md spec: https://agents.md/
 - Agent Skills spec: https://agentskills.io/specification
 
@@ -65,8 +67,8 @@ Docs:
 | ----------- | ---------------------------------- | ------------------------------------------------------------------------------- |
 | Claude Code | `.claude-plugin/marketplace.json`  | local sources only (use sync scripts for external repos)                        |
 | Codex CLI   | `.agents/plugins/marketplace.json` | local sources only; use `./`-prefixed `source.path` plus plugin `policy` fields |
-| Cursor      | `.cursor-plugin/marketplace.json`  | local sources, needs `source` + `description`                                   |
-| Gemini CLI  | none                               | per-plugin install: `gemini extensions install --path ./plugins/<name>`         |
+| Cursor      | `.cursor-plugin/marketplace.json`  | needs top-level `name`, `owner`, and `plugins`, entries need `name` and use local `source` paths |
+| Antigravity CLI  | none                               | per-plugin install: `uv run .github/scripts/antigravity.py install <name>`         |
 
 #### Claude Code marketplace entry
 
@@ -157,8 +159,8 @@ Path: `agents/<name>.md`
 name: agent-name
 description: |-
   Use this agent when... Examples: <example>...</example>
-tools: [Bash, BashOutput, Glob, Grep, Read, Edit, Write]
-skills: related-skill-name
+tools: [Bash, Glob, Grep, Read, Edit, Write]
+skills: [related-skill-name]
 model: inherit
 color: blue
 ---
@@ -168,13 +170,12 @@ color: blue
 - `name`: kebab-case, 3-50 chars
 - `model`: inherit, sonnet, opus, haiku, fable (or a full model ID like `claude-opus-5`)
 - `color`: red, blue, green, yellow, purple, orange, pink, cyan
-- `tools`: array of allowed tool names
-- `skills`: optional, skill name(s) to load
+- `tools`: YAML list of allowed tool names, without removed tools such as `BashOutput` or `MultiEdit`
+- `skills`: optional YAML list of skill names to load. Antigravity skips an agent whose `tools` or `skills` is a string
 
 If an agent selects a Claude-only model, keep it outside the shared `agents/`
 directory and point to it with the Claude manifest's `agents` field. Cursor only
-accepts `name` and `description` for plugin agents, while Gemini agent models
-must be Gemini models. Give other tools a skill that calls the provider CLI.
+accepts `name` and `description` for plugin agents. Antigravity bundles exclude these agents. Give other tools a skill that calls the provider CLI.
 
 ### Hooks Format
 
@@ -189,7 +190,7 @@ Path: `hooks/hooks.json`
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/my_script.py"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/scripts/my_script.py"
           }
         ]
       }
@@ -209,13 +210,21 @@ Path: `hooks/hooks.json`
 }
 ```
 
-Codex events: PreToolUse, PermissionRequest, PostToolUse, PreCompact, PostCompact, UserPromptSubmit,
-SubagentStart, SubagentStop, Stop, and SessionStart. Other tools may support additional events.
+Codex events: SessionStart, SessionEnd, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PreCompact,
+PostCompact, PreModelRequest, PostModelRequest, SubagentStart, SubagentStop, Stop, and Interrupt. SessionEnd and
+Interrupt skip subagents. Codex skips plugin hooks until the user trusts them in `/hooks`, and a changed hook or
+bundled script needs a new review.
+
+Antigravity events: SessionStart, PreInvocation, PostInvocation, Stop, PreToolUse, and PostToolUse. Only the two tool
+events take a `matcher`. There is no UserPromptSubmit or PreCompact.
+
+Cursor hooks are partial. Plugin hooks run `command` hooks only, `ask` is not enforced on preToolUse, and Cursor names
+tools `Shell`, `Write`, and `MCP:<tool_name>` instead of `Bash`, `Edit`, and `mcp__*`.
 
 Hook types:
 
 - `command`: runs a script that reads JSON from stdin.
-- `prompt`: supported by Claude Code and Gemini. Codex parses it but skips it.
+- `prompt`: supported by Claude Code. Codex parses it but skips it, and the Antigravity installer converts only `command` hooks.
 - `agent`: Codex parses it but skips it.
 
 Blocking and rewrite responses are tool-specific. Follow each tool's hook response schema.
@@ -232,14 +241,21 @@ form, but Codex does not document that field:
 
 Codex normalizes shell and patch calls:
 
-- `Bash` and unified `exec_command` calls provide their command in `tool_input.command`.
+- `exec_command` reports `tool_name: "Bash"` with the command string in `tool_input.command`. It drops the `workdir`
+  argument and always sends the session folder as `cwd`, so hooks cannot see where a `workdir` command runs.
 - `apply_patch` provides the full patch envelope in `tool_input.command`, not a `file_path`.
 - `apply_patch` matches `apply_patch`, `Edit`, or `Write`, but still reports `tool_name: "apply_patch"`.
-- Post-write hooks that need paths must parse each `*** Add File:` or `*** Update File:` header from the patch envelope.
+- Hooks that need paths parse the `*** Add File:`, `*** Update File:`, and `*** Delete File:` headers of the patch
+  envelope. A `*** Move to:` line after an Update header renames that file, so a pre-write hook reads it from the Update
+  path and judges it by the Move to path, while a post-write hook finds it at the Move to path.
 
-Claude Write, Edit, and MultiEdit calls continue to provide `tool_input.file_path`.
+Codex marks a hook failed and runs the tool anyway when its JSON output has a field outside the Codex schema,
+`permissionDecision: "ask"`, or `permissionDecision: "allow"` without `updatedInput`. It ignores plain-text PreCompact
+output.
 
-Use `${CLAUDE_PLUGIN_ROOT}` for script paths. `matcher` matches tool names such as `Edit`, `Bash`, or
+Claude Write and Edit calls continue to provide `tool_input.file_path`. Claude Code no longer has a MultiEdit tool.
+
+Use `${CLAUDE_PLUGIN_ROOT}` for script paths and wrap it in double quotes in shell-form commands, or `claude plugin validate` warns. `matcher` matches tool names such as `Edit`, `Bash`, or
 `mcp__tavily__tavily_search`.
 
 ### Commands Format
@@ -255,29 +271,48 @@ argument-hint: optional argument hint
 [command instructions - what to do when this command is invoked]
 ```
 
-Commands are Claude Code only. Gemini CLI uses TOML commands. Other tools use skills for similar functionality.
+Commands work in Claude Code and Cursor, which reads only `name` and `description` from their frontmatter. Codex and Antigravity use skills instead.
 
 ### Component Portability
 
-| Component                         | Claude Code | Codex CLI   | Gemini CLI  | Cursor  |
+| Component                         | Claude Code | Codex CLI   | Antigravity CLI  | Cursor  |
 | --------------------------------- | ----------- | ----------- | ----------- | ------- |
 | Skills (`skills/<name>/SKILL.md`) | native      | native      | native      | native  |
-| Agents (`agents/<name>.md`)       | native      | config.toml | preview     | native  |
-| Hooks (`hooks/hooks.json`)        | native      | native      | native      | partial |
-| Commands (`commands/<name>.md`)   | native (MD) | no          | TOML format | no      |
+| Agents (`agents/<name>.md`)       | native      | `.codex/agents/<name>.toml` | excluded    | native  |
+| Hooks (`hooks/hooks.json`)        | native      | native      | converted   | partial |
+| Commands (`commands/<name>.md`)   | native (MD) | no          | no          | native  |
 | Output styles (`output-styles/`)  | native      | no          | no          | no      |
 
 ### Installation
 
 - Claude Code: run `claude plugin marketplace add fcakyon/claude-codex-settings`, then `claude plugin install plugin-name@claude-settings`
 - Codex CLI: run `codex plugin marketplace add fcakyon/claude-codex-settings`, then `codex plugin add plugin-name@claude-settings`
-- Cursor: run `cursor-agent plugin marketplace add https://github.com/fcakyon/claude-codex-settings`, start `cursor-agent`, then enter `/plugin`
-- Gemini CLI: run `gemini extensions install --path ./plugins/plugin-name`
+- Cursor: run `agent plugin marketplace add https://github.com/fcakyon/claude-codex-settings`, start `agent` (formerly `cursor-agent`), then enter `/plugin`
+- Antigravity CLI: run `uv run .github/scripts/antigravity.py install plugin-name`
+
+### Antigravity packaging
+
+Use `uv run .github/scripts/antigravity.py install <plugin...>` after cloning this repo, or `uv run .github/scripts/antigravity.py sync` to install the curated plugin set and merge `.gemini/config/config.json` and `.gemini/antigravity-cli/settings.json` into `~/.gemini` while keeping local plugins and `trustedWorkspaces`. The installer copies shared skills and their scripts/assets into a temporary native bundle, normalizes skill folder names, keeps bodies over 24,000 bytes in `INSTRUCTIONS.md`, copies `.mcp.json` to native `mcp_config.json`, and calls `agy plugin install`. It converts PreToolUse and PostToolUse command hooks on Bash, Write, Edit, and MultiEdit (see Antigravity hooks) and excludes agents, commands, output styles, and every other hook. Plugins with none of the supported components have no Antigravity manifest and no install option.
+
+Native validation and hook behavior were checked with Antigravity CLI 1.5.14. Its native bundles read MCP servers from `mcp_config.json`, while portable Agent Plugins use a different schema and `mcp.json`.
+
+#### Antigravity hooks
+
+- Bundles keep `hooks.json` at the root, keyed by hook group name: `{"<plugin>": {"PreToolUse": [{"matcher": "run_command", "hooks": [...]}]}}`. A top-level `description` makes the loader skip the whole file, the Claude `{"hooks": ...}` wrapper loads as one group named `hooks`, and `hooks/hooks.json` is never read.
+- Commands run in the installed plugin folder, so use `./hooks/...`. `${CLAUDE_PLUGIN_ROOT}` is unset, and strict validation warns on `${PLUGIN_ROOT}` because older versions lack it.
+- Input has `hookEventName`, `cwd` (the workspace), and `toolCall.name`/`toolCall.args`. Models call `write_file` and `edit_file` while the docs list `write_to_file`, `replace_file_content`, and `multi_replace_file_content`, so the adapter's `TOOLS` table maps both sets.
+- PreToolUse answers `{"decision": "deny" | "ask" | "allow", "reason": "..."}` with exit 0. Version 1.5.14 blocks the call on any non-zero exit, although the docs say it fails open, so never signal through exit codes. PostToolUse answers `{}` and gets no tool output.
+- `.github/scripts/antigravity_hook.py` runs every command of a converted group. It rewrites the input to Claude's `tool_name`, `tool_input`, and `cwd`, drops the `CLAUDECODE` that agy inherits when started inside Claude Code, and returns the strictest Claude deny, ask, or exit 2 as `decision`, so each hook script keeps one source for all tools. Hooks gated on `CLAUDECODE` (the commit and PR confirmations, the simplify guard) stay inert under Antigravity.
+- For a live check without a global install, put the converted groups in a scratch workspace's `.agents/hooks.json` with absolute `cd <bundle> &&` prefixes and run `agy -p`.
+
+Codex and Cursor both support portable Agent Plugins (`plugin.json` and `mcp.json`) as well as their compatibility layouts. Keep `.mcp.json` in the `{"mcpServers": {...}}` form that all four tools read, and set `"mcpServers": "./.mcp.json"` in `.cursor-plugin/plugin.json`, because Cursor otherwise only looks for `mcp.json`. Keep the current compatibility manifests for existing hooks and agents. Share source metadata and skills, but retain separate marketplace adapters: Codex uses `.agents/plugins/marketplace.json` with structured `source` and `policy`. Cursor uses `.cursor-plugin/marketplace.json` with its own entry fields. `agy plugin install` takes a local folder, a GitHub repo URL, or `<name>@antigravity-plugins-official`, and accepts no other marketplace name. On a raw Claude Code plugin it maps hook matchers but leaves hook inputs and outputs unconverted, so keep the bundler.
 
 ### Updating
 
-- Claude Code: `claude plugin marketplace update`, then `claude plugin update <name>@claude-settings` per plugin (no bulk flag), then restart to apply
-- Codex CLI: `codex plugin marketplace upgrade` updates installed plugins directly since they read the git snapshot, no per-plugin step
+- Claude Code: `claude plugin marketplace update`, then `claude plugin update <name>@claude-settings` per plugin (no bulk flag), then run `/reload-plugins` or start a new session
+- Codex CLI: `codex plugin marketplace upgrade` refreshes the git snapshot and reinstalls configured plugins from a version-keyed cache, no per-plugin step
+- Cursor: `agent plugin marketplace update claude-settings` re-indexes the marketplace, then start a new `agent` session
+- Antigravity CLI: pull this repo and re-run `uv run .github/scripts/antigravity.py install <name>` or `sync`, which replaces the installed copy even at the same version
 - Same-version edits will not ship, so bump the plugin `version` first (see Version alignment)
 
 ## Adding a New Plugin
@@ -295,7 +330,7 @@ Commands are Claude Code only. Gemini CLI uses TOML commands. Other tools use sk
    }
    ```
 3. Copy `.claude-plugin/plugin.json` to `.codex-plugin/plugin.json` and `.cursor-plugin/plugin.json`
-4. Create `gemini-extension.json` at plugin root with `{name, version, description}` only
+4. Run `sync-versions.sh` to generate `.antigravity-plugin/plugin.json` when the plugin has skills or MCP servers
 5. Add entry to `.claude-plugin/marketplace.json` (Claude Code). See "Claude Code marketplace entry" sample above and "Marketplace entry fields" rules below.
 6. Add entry to `.agents/plugins/marketplace.json` (Codex CLI). See "Codex CLI marketplace entry" sample above.
 7. Add entry to `.cursor-plugin/marketplace.json` (Cursor). See "Cursor marketplace entry" sample above.
@@ -313,7 +348,7 @@ All plugins use local sources: `"source": "./plugins/<plugin-name>"`. For extern
 
 ### plugin.json fields
 
-Local plugins use: `name`, `version`, `description`, `homepage`, `repository`, `license`. Author is optional (skip for third-party plugins).
+Local plugins use: `name`, `version`, `description`, `homepage`, `repository`, `license`. Author is optional (skip for third-party plugins). Give new plugins names that do not start with `claude-`, `anthropic-`, `anthropics-`, or `cc-plugin-`. `claude plugin validate` rejects those prefixes. The existing `claude-*` and `anthropic-*` plugins keep their names so installs keep updating, and CI ignores only that error.
 
 ### SKILL.md frontmatter
 
@@ -325,7 +360,7 @@ Rich metadata (`keywords`, `category`, `tags`) lives in `marketplace.json`, not 
 
 ### Description handling
 
-The `description` field is intentionally NOT auto-synced. Each platform's audience differs (marketplace search, IDE panels, extension catalogs), so descriptions are free to diverge. Today they all match per-plugin by default. When rewriting, update all 6 places by hand: 4 plugin manifests (see "Plugin Manifests" table above) plus 2 marketplace entries.
+Codex, Cursor, and marketplace descriptions are intentionally NOT auto-synced. Each platform's audience differs (marketplace search, IDE panels, extension catalogs), so descriptions are free to diverge. Today they all match per-plugin by default. When rewriting, update the Claude, Codex, and Cursor plugin manifests plus the Claude and Cursor marketplace entries. `sync-versions.sh` generates the Antigravity description from the Claude manifest.
 
 ### Upstream license handling
 
@@ -345,6 +380,16 @@ When writing README or docs content for this repo:
 - When two plugins are designed to be used together, end each plugin's README long block with a "Pairs naturally with `other-plugin`" line on BOTH sides, so the pairing is asserted from both directions
 - Plan for future before/after GIFs or demos per plugin to show value visually
 
+### Website catalog pages
+
+`site/src/lib/content.ts` discovers plugins and local skills and generates their pages, hub links and sitemaps. No selected-skill list is needed.
+
+- `site/src/lib/catalog-seo.json` owns public titles, summaries and related skill links. Pages, cards, social tags, structured data and the LLM catalog share this copy. Detailed instructions remain in `SKILL.md`; versions, tools and install commands come from repository sources. Vendor syncs keep website copy intact.
+- Add, remove or rename catalog entries with their source plugin/skill. Write unique, complete task summaries and distinguish similar skills by provider or workflow. Choose related links by task, including across plugins. Do not turn invocation triggers into search snippets.
+- Run `npm ci --prefix site` and `npm run build --prefix site`. Build checks cover every page, metadata uniqueness, canonical URLs, headings, social tags, schema, contextual links, sitemaps and missing/stale entries.
+- `InstallGuide.astro` owns installation choices for the guide and catalog pages. Show only supported tools and link ZIP downloads to published assets. `downloads.ts` sums GitHub release assets across paginated published releases once per build. Plugin totals combine skill ZIPs and earlier plugin ZIPs without counting the same asset twice. These are download actions, not installs or unique users. The `Website` workflow redeploys daily so counts stay fresh.
+- Titles use 20–70 characters and summaries use 90–160 as editorial budgets, not Google limits. Review meaning against source; indexing, ranking and Google snippet selection are not guaranteed.
+
 ### Plugin descriptions
 
 The `description` field in `plugin.json` and marketplace entries faces non-technical marketplace browsers. Lead with concrete user-visible outcomes, not the mechanism. Drop jargon (OTel, hook event names, internal config field names). Write one sentence of at least 40 chars ending in a period, short enough that name plus description fits the 100-char README row. CI enforces this shape.
@@ -356,7 +401,7 @@ See `### Description handling` (Marketplace Plugin Conventions) for the list of 
 
 ## Commit and PR Writing Style
 
-**Run the `/simplify` skill on the staged diff before every commit, then apply its findings. Docs-only diffs are a no-op.**
+**Run the `/simplify` skill on the staged diff before every commit, docs-only commits included, then apply its findings.**
 
 This repo contains config files (JSON settings, allowlist rules, hooks) rather than application code. Commit messages and PR descriptions should be written in plain language that anyone can understand, not just Claude Code plugin developers.
 
@@ -367,6 +412,16 @@ This repo contains config files (JSON settings, allowlist rules, hooks) rather t
 - Keep PR bodies short: lead with why, short scannable bullets (one point each), a diff or snippet, numbers over adjectives
 - PR titles and bodies must read standalone months later: never reference session shorthand ("PR-cf", "the last orphan content PR"), only real PR numbers (`#176`)
 - Site design changes need before/after visuals in the PR body, never a text description of the change. Never commit visuals into the repo: upload with `gh release upload <tag> shot.png` and link the `releases/download/<tag>/shot.png` URL
+
+## Validation
+
+CI runs three checks on every PR. Run them locally before pushing plugin changes.
+
+- `python .github/scripts/validate_plugins.py`: static rules no CLI enforces, including the agent, MCP, and Cursor marketplace rules above.
+- `uv run .github/scripts/antigravity.py validate`: `agy plugin validate --strict` on every native bundle.
+- `python .github/scripts/validate_providers.py`: `claude plugin validate` on the marketplace and every plugin, failing on any finding except reserved names and missing authors. It also installs every plugin into an empty `CODEX_HOME` and fails when Codex rejects a plugin, warns about a hook or skill, or loads fewer skills and commands than the repo declares. Codex silently drops a command file over about 3.8 KB.
+
+Cursor has no validator, and its CLI needs a login, so its rules live in `validate_plugins.py`.
 
 ## Maintenance Scripts
 
@@ -386,6 +441,7 @@ Per-vendor scripts sync official agent-skills repos into local plugins:
 
 - `_helpers.sh` — shared functions (clone/update, copy, zip)
 - `sync-<name>-skills.sh` — per-vendor: clone repo to ~/dev/, copy SKILL.md + subdirs, create zip
+- Local additions: each sync overwrites the copied skill files, so keep repo-specific content in `.github/scripts/<plugin>/` and let the sync script add it. SEO is maintained locally under `plugins/seo-skills/skills/`, including its scripts and references. `sync-seo-skills.sh` only packages those files and never fetches or copies upstream content. Review upstream changes separately. Do not restore the old destructive vendor sync or duplicate field-note sources.
 
 ```bash
 bash .github/scripts/sync-mongodb-skills.sh
@@ -395,7 +451,10 @@ bash .github/scripts/sync-supabase-cli-skills.sh
 bash .github/scripts/sync-stripe-skills.sh
 bash .github/scripts/sync-polar-skills.sh
 bash .github/scripts/sync-livekit-skills.sh
+bash .github/scripts/sync-heroui-skills.sh
 bash .github/scripts/sync-react-skills.sh
+bash .github/scripts/sync-modern-web-guidance.sh
+bash .github/scripts/sync-typescript-skills.sh
 bash .github/scripts/sync-frontend-skills.sh
 bash .github/scripts/sync-seo-skills.sh
 bash .github/scripts/sync-agent-browser-skills.sh
@@ -411,6 +470,11 @@ bash .github/scripts/sync-openclaw-skills.sh
 ```
 
 Adding a new vendor: create `sync-<name>-skills.sh`, source `_helpers.sh`, list repos + skill paths.
+
+Modern Web Guidance syncs both GoogleChrome skills from the npm release pinned in the web skill’s scripts/package-lock.json. Update its exact dependency and lock together, then run the sync. It preserves the local web entry point and launcher.
+
+`frontend-testing-debugging` is maintained locally. The frontend sync packages it without replacing it from upstream.
+OpenClaw test-audit keeps its detailed checklist in `references/audit.md`. Sync it alongside `SKILL.md` and `CAMPAIGN.md`, and adapt repository-specific workflow links in both the skill and checklist.
 
 #### When a sync script fails
 
@@ -429,7 +493,7 @@ Failures usually mean the upstream repo restructured. Diagnostic steps:
 bash .github/scripts/sync-versions.sh
 ```
 
-Propagates `version` everywhere and `license` everywhere except `gemini-extension.json` (spec excludes license). Marketplace files are edited via narrow regex replacements that preserve their hand-tuned JSON formatting (compact arrays, etc.). Re-running on a no-op is zero-write. CI validates alignment on every PR.
+Propagates `version` and `license` everywhere and generates Antigravity metadata from the canonical manifest. Marketplace files are edited via narrow regex replacements that preserve their hand-tuned JSON formatting (compact arrays, etc.). Re-running on a no-op is zero-write. CI validates alignment on every PR.
 
 ### Releases
 
@@ -437,11 +501,11 @@ Propagates `version` everywhere and `license` everywhere except `gemini-extensio
 bash .github/scripts/release.sh <version>
 ```
 
-Updates marketplace version, regenerates all skill zips, uploads them as release assets, generates release notes from README + auto-changelog.
+Packages every skill from the committed `HEAD` in a temporary Git snapshot, verifies each ZIP against its source, and publishes the assets with a tag targeting that commit. Release notes use the committed README and auto-changelog. Use `--dry-run` to package and verify without publishing.
 
-**Pre-flight**: run `bash .github/scripts/sync-versions.sh` and every `sync-*-skills.sh` manually first. `release.sh` re-runs them, but if any has broken on an upstream restructure the release will ship a stale or empty plugin. Surface those breakages BEFORE tagging.
+**Pre-flight**: run every `sync-*-skills.sh`, bump changed plugin versions, and run `bash .github/scripts/sync-versions.sh`. Resolve upstream path failures and validate the plugins before committing. The release command packages committed files without fetching upstream content or changing the checkout.
 
-**Versioning**: bump `metadata.version` in `.claude-plugin/marketplace.json` yourself, run `sync-versions.sh` to propagate it, and commit that before releasing. `release.sh <version>` only checks the committed value matches and stops if it does not, because `gh release create` tags the pushed branch and never sees a local edit. Bump minor for new plugins or skill-set additions, patch for sync refreshes, bug fixes, or copy edits.
+**Versioning**: bump `metadata.version` in `.claude-plugin/marketplace.json`, run `sync-versions.sh` to propagate it, then commit, merge, and check out the release commit before running `release.sh <version>`. The command requires the committed version to match. Bump minor for new plugins or skill-set additions, patch for sync refreshes, bug fixes, or copy edits.
 
 **README zip URLs**: existing zip badges use `releases/latest/download/<skill>.zip` and auto-resolve to the new tag. Do NOT manually bump these URLs after release. New skills introduced in the release need new badge rows added via `/claude-tools:update-readme`.
 

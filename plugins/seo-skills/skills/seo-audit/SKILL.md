@@ -22,7 +22,7 @@ Work down the list and stop where the evidence stops. Most asks are answered at 
 
 Readable from a fetch: title tag, meta description, heading order and text, body copy, visible links and their anchor text, canonical tag, `robots` meta, `hreflang` in the HTML head, server-rendered JSON-LD, `robots.txt` and `sitemap.xml` when you fetch them directly.
 
-Not readable, so not yours to assert: anything JavaScript injects after load, Core Web Vitals and any speed measurement, whether Google has actually indexed a URL, rank position, search volume, traffic, backlink counts, and whole-site facts like orphan pages or crawl budget that need a crawl you can't run.
+Not readable, so not yours to assert: anything JavaScript injects after load, Core Web Vitals and any speed measurement, whether Google has actually indexed a URL, rank position, search volume, traffic, backlink counts, and whole-site facts like orphan pages or crawl budget that need evidence beyond a single fetch or bounded sample.
 
 The trap worth naming: CMS SEO plugins commonly inject JSON-LD client side, so a fetch shows no schema on a page that has plenty. Never conclude "no schema" from a fetch. Report that the server HTML carried none, and send them to the Rich Results Test at https://search.google.com/test/rich-results, which renders JavaScript.
 
@@ -37,6 +37,51 @@ Work outward from the page before reaching for site-wide theories.
 - Is the intent right? A product page will not rank for a question query however well optimized it is.
 - Is it thinner than what ranks? Compare against the pages currently ranking rather than against a word count.
 - Did something change? A migration, a redesign, or a template change dated near the drop is the first thing to check, and a drop that starts on a single date usually has a single cause.
+
+## Run the technical audit
+
+Use the bundled scripts before judging the page. They work from HTTP responses and HTML, independent of the app’s framework. From this skill directory, use Node.js 22 or newer:
+
+```sh
+npm ci --prefix scripts --ignore-scripts
+node scripts/audit.mjs https://example.com --json
+```
+
+The audit reuses `check_head.mjs` for the entry page’s metadata, crawler responses, share images, favicons separate from `apple-touch-icon`, multi-hop redirect chains on `www` and `http`, unknown-path canonical leaks, and generated OG image `X-Robots-Tag: noindex` headers. Across discovered pages, it checks `robots.txt`, XML sitemap indexes, XML, gzip-compressed XML, or text sitemaps (`X-Robots-Tag: noindex` headers plus duplicate, malformed-slug, or double-slash URLs across all `<loc>` entries), unlinked `/llms.txt` `noindex` headers, internal links, canonical and `noindex` conflicts, local-host URL leaks, subpage `max-image-preview:large` and meta attribute spelling, locale return links, duplicate titles/descriptions, missing alt attributes, and nested JSON-LD syntax and `Dataset` / `BreadcrumbList` / `ProfilePage` rules. HTML and HTTP Link headers both supply canonical and locale annotations. XML sitemap locale annotations are checked too.
+
+Both `audit.mjs` and `check_head.mjs` prefer IPv4 DNS first so dual-stack hosts do not stall on broken IPv6 routes.
+
+The crawl stays on the final entry origin, respects Googlebot’s robots rules for discovered pages, and checks at most 20 page URLs and 10 sitemaps. Use `--max-pages 100` to expand it, up to 500. Each crawl response has a 5 MiB budget and a 10-second timeout. The existing entry-page probes have their own request budgets. Cross-origin targets, unsupported feeds, request challenges, and crawl limits are reported as unchecked. A bounded crawl cannot prove that the whole site is free of errors or has no orphan pages.
+
+The entry page is expected to be public and indexable. For an intentionally private entry page, add `--expect-noindex`. Discovered pages are not assumed to need indexing, but sitemap entries are expected to be indexable canonical URLs. Never remove deliberate privacy or training restrictions to satisfy an audit.
+
+Read `findings`, `coverage`, and `pages` together. `coverage.crawlComplete` refers only to discovered URLs, not to rendered pages or every URL the site might have:
+
+- `fail`: observed technical failures, such as a broken referenced URL or a noindex sitemap entry
+- `review`: recommendations and context-dependent findings, such as duplicate titles or limited snippets
+- `unchecked`: missing evidence, blocked requests, or work beyond the crawl budget
+- `pass`: the stated check passed or a policy value was observed, not proof of indexing or ranking
+
+Exit 1 means confirmed failures, exit 2 means invalid invocation or a run error, and exit 0 means no confirmed failures. Exit 0 does not mean all checks ran. `rulesCheckedOn` records when the cited guidance was reviewed, not a live certification against every Google update.
+
+For a single URL without installing the crawl parsers, use `node scripts/check_head.mjs <url> --json`. For optional llms.txt work, use `node scripts/check_llms_txt.mjs <site-url>`. A missing llms.txt is not a Google SEO failure, though an existing `/llms.txt` should return `X-Robots-Tag: noindex`. For full schema validation, use the schema skill’s `node scripts/validate_schema.mjs <jsonld-file|-|--url https://...>`. Its field map is a checklist, not proof of rich-result eligibility.
+
+## Interpret evidence the scripts cannot settle
+
+A server-HTML warning is not a rendered-page finding. For client-rendered pages, inspect the browser DOM with available browser tooling before concluding that a title, heading, link, or structured data is missing. Compare raw and rendered evidence without pretending a browser render is Google’s indexing result. Measure performance with Lighthouse or PageSpeed Insights and distinguish lab measurements from field Core Web Vitals. Use Search Console for actual index coverage, selected canonicals, snippets, and search performance.
+
+Google’s [generative AI guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) uses the same SEO foundations. It does not require llms.txt, special AI markup, fixed content lengths, or a special writing style. Review Googlebot access and index/snippet controls. The script reports AI-search and training crawler policies separately. Blocking a training crawler is not a search failure, and a spoofed user-agent request cannot prove whether a verified crawler is allowed through a firewall. Content quality, intent, expertise, and factual accuracy still need editorial judgment. Do not produce an invented SEO or AI-readiness score.
+
+Open the actual share images at feed and phone preview sizes. Flag redundant printed web addresses, subtitles that repeat the headline, and unreadable text. Suggest deleting redundant copy before enlarging the main message or product visual and rebalancing spacing. When creating or revising a card, omit redundant URLs and small subtitles by default. Keep useful context, standalone-sharing needs, explicit user choices, and recognizable branding. This is visual clarity advice, not a crawler requirement or ranking fix. Mark it unverified when you cannot inspect the image.
+
+After a change, rerun the affected checks. Submit sitemaps or start Search Console validation only when the task authorizes that action and evidence supports it. When working in Search Console:
+
+- Run `google-search-console-cli` first to compare registered sitemaps against live `robots.txt` and `/sitemap.xml` declarations and to inspect representative unindexed URLs.
+- Verify live production responses for Search Console's listed `Examples` and `FAILED` URLs before clicking Validate Fix.
+- Skip validation on intentional redirects, intentional `noindex` pages, intentional `robots.txt` blocks, bot-probe 404s, or non-critical enhancement warnings when any listed example intentionally omits an optional property (for example a dataset without an upstream license).
+- Stop cleanly if Request Indexing hits Google's daily quota, and report externally hosted domains behind anti-bot challenges (such as Cloudflare Managed Challenge) without bypassing them.
+
+Never claim freshness of a sitemap’s lastmod dates without evidence of actual content changes.
 
 ## References
 

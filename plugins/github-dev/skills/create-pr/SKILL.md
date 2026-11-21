@@ -9,6 +9,9 @@ Create a PR a reviewer can understand without reading the conversation. Use extr
 text and session findings to explain the problem, final behavior, and evidence. Follow the
 user's requested format and the target repo's guidance.
 
+These rules apply to pull requests. For problem-focused issue titles and structured
+issue reports, use [create-issue](../create-issue/SKILL.md).
+
 ## Workflow
 
 1. **Inspect the scope and base**
@@ -21,8 +24,8 @@ user's requested format and the target repo's guidance.
    - Create a short branch using the repo's naming convention. Never commit directly to main.
 
 2. **Finish and inspect the change**
-   - Run `/simplify` on the staged diff before committing and apply its findings. Docs-only
-     diffs are a no-op. Follow `commit-staged` for any staged changes.
+   - Run `/simplify` on the staged diff before committing and apply its findings, docs-only
+     commits included. Follow `commit-staged` for any staged changes.
    - Update existing documentation only when the requested change makes it inaccurate.
    - Review `git diff <remote>/<base>...HEAD` across all commits. For an existing PR, use its
      actual base and head, or `gh pr diff <pr>` if this checkout is on another branch.
@@ -43,9 +46,11 @@ user's requested format and the target repo's guidance.
 
 ## Title and body
 
-- Title: start with a capitalized verb and name the concrete behavior, such as
-  `Fix copied session text losing line breaks`. No type prefix, internal brand names, or
-  vague claims. Rewrite the title and body when the final scope changes.
+- PR title: start with a capitalized verb and name the concrete behavior, such as
+  `Fix copied session text losing line breaks`. No internal brand names or vague claims.
+  Add a Conventional Commits prefix (`fix: ...`) only when the repo squash-merges, since
+  the title becomes the single commit, and match its recent merged titles. Otherwise use
+  no type prefix. Rewrite the title and body when the final scope changes.
 - Lead with the trigger and consequence: when does the bug happen, what goes wrong, and why
   does the fix matter? For a feature, show what the user can now do. Skip "This PR" openers.
 - Keep distinct points in short bullets, usually 1-3. Do not squeeze several ideas into a
@@ -72,13 +77,20 @@ user's requested format and the target repo's guidance.
 
 - UI/design changes need readable Before/After images or GIFs in a two-column table. Match
   viewport and scenario, and inspect the visuals before using them. Analysis/plot changes
-  need representative outputs and measured results readable at the displayed size.
-- Never commit PR screenshots or generated figures into the branch. Follow the user's and
-  repo's hosting rules. Where release uploads are permitted, use an existing appropriate
-  release and embed its asset URLs. Preserve existing GitHub attachment URLs as well.
-- For Ultralytics repos, never upload visuals to release assets. Give the user absolute local
-  paths, the PR link, and the sentence/table cell where each image belongs for manual upload.
-  Do not invent attachment URLs or claim pending uploads are visible.
+  need representative outputs, charts, or figures readable at the displayed size.
+- Never commit PR screenshots or generated figures into the branch.
+- Attach images, charts, or videos directly with `gh` `--attach` on `gh pr create`,
+  `gh pr edit`, or `gh pr comment` (requires **`gh` >= 2.99.0** and write/push access; up
+  to 50 files per command). Reference the exact local path inline in `--body-file` (for
+  example `![Before](./before.png)` and `![After](./after.png)` in a `| Before | After |`
+  table) so `gh` uploads the files to GitHub `user-attachments` and rewrites the links in
+  place. Any `--attach` file not referenced in the body is appended at the end; use
+  `--attach './plot.png#Alt text'` to set custom alt text.
+- If `gh --version` is below `2.99.0`, upgrade `gh` first. Where `--attach` is unavailable
+  or write access is missing, follow the repo's hosting rules (for Ultralytics repos, never
+  upload visuals to release assets—give the user absolute local paths, the PR link, and the
+  sentence/table cell where each image belongs for manual upload). Do not invent attachment
+  URLs or claim pending uploads are visible.
 - When editing a body, preserve user-uploaded images/GIFs, bot-added context, related links,
   and still-valid evidence unless the user asks to remove them. Edit the relevant portion
   rather than replacing the whole body. Keep proof in the body instead of duplicating it

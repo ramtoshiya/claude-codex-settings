@@ -14,7 +14,7 @@ points in the commit message body instead of relying on the diff alone.
 
 ## Process
 
-**First, run the `/simplify` skill on the staged diff and apply its findings before committing. Docs-only diffs are a no-op.**
+**First, run the `/simplify` skill on the staged diff and apply its findings before committing, docs-only commits included.**
 
 1. **Preferred execution**
    - If subagents are available, use `github-dev:commit-creator` for the full workflow.
@@ -24,6 +24,7 @@ points in the commit message body instead of relying on the diff alone.
 2. **Analyze staged files only**
    - Check all staged files: `git diff --cached --name-only`
    - Read diffs: `git diff --cached`
+   - When a relevant check could pick up unstaged or untracked code, use the bundled `scripts/verify-staged COMMAND [ARG...]` from the repository. It runs the command in a temporary export of the staged tree and prints its Git tree ID on success. Supply a command that builds or starts its own candidate there. Dependencies, ignored files, submodule checkouts and Git history are outside the export. Confirm a previously tested tree still matches `git write-tree` before reusing its result.
    - Completely ignore unstaged changes
 
 3. **Commit message format**
@@ -34,23 +35,40 @@ points in the commit message body instead of relying on the diff alone.
    - Focus on 'why' not 'what'
    - 1 sentence conventional style + 1-2 short motivation/findings sentences if possible
    - For complex changes, add bullet points after blank line
+   - End with the required verification trailer from step 4
 
-4. **Message examples**
-   - `feat: add sign-in flow`
-   - `fix: stop duplicate jobs on save`
-   - `docs: add skills install snippets`
+4. **Verification trailer (required in every commit)**
+   - After a blank line, end the message with one lowercase `verification:` line. The github-dev commit hook blocks any commit message without it.
+   - Name the relevant checks actually completed for the staged changes and their results.
+   - If none ran, write `verification: none (<reason>)` so unverified commits stay searchable.
+   - Include a material failure or blocker without claiming it passed. Keep future checks out of the trailer.
+   - If the project uses `project-qa`, its `run --verification` output supplies case IDs and observed statuses. For a journey, include the environment and observed behavior, for example `verification: local Chrome mailbox refresh kept one sync request and manual sync started a second`.
+   - [Source](https://claude.dev/blog/how-the-claude-code-team-thinks-about-verification)
 
-5. **Documentation update**
+5. **Message examples**
+
+   ```text
+   fix: stop duplicate jobs on save
+
+   verification: save regression test passed 20 consecutive runs
+   ```
+
+   ```text
+   docs: add skills install snippets
+
+   verification: none (docs only, no runnable checks)
+   ```
+
+6. **Documentation update**
    - Check README.md for:
      - New features that should be documented
      - Outdated descriptions no longer matching implementation
      - Missing setup instructions for new dependencies
    - Update as needed based on staged changes
 
-6. **Execution**
+7. **Execution**
    - Commit uses HEREDOC syntax for proper formatting
    - Verify commit message has correct format
-   - Don't add test plans to commit messages
 
 ## Best Practices
 

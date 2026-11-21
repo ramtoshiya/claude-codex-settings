@@ -52,10 +52,14 @@ class HumanizeTest(unittest.TestCase):
         )
 
     def test_comments_are_quote_aware(self):
-        """Ignore comment markers inside quoted values and strings."""
+        """Ignore comment markers inside quoted values, strings, and shell words."""
         cases = (
             ("config.yml", f'motd: "welcome # to prod{SEMICOLON} be careful"\n'),
             ("app.ts", f'const note = "see {"/" * 2} ref{SEMICOLON} here"{SEMICOLON}\n'),
+            ("a.sh", f"[ $# -gt 0 ] || {{ echo no{SEMICOLON} exit 1{SEMICOLON} }}\n"),
+            ("a.sh", f"n=${{#items[@]}}{SEMICOLON} echo $n\n"),
+            ("a.sh", f"case $# in 0) exit 1 {SEMICOLON}{SEMICOLON} esac\n"),
+            ("a.sh", f"x=${{var#prefix}}{SEMICOLON} echo $x\n"),
         )
         for path, content in cases:
             self.assertEqual(run_hook("Write", {"file_path": path, "content": content}), "")
@@ -67,6 +71,7 @@ class HumanizeTest(unittest.TestCase):
             ("config.yml", f"# This comment has a semicolon{SEMICOLON} replace it."),
             ("app.py", f'"""This docstring has a semicolon{SEMICOLON} replace it."""'),
             ("app.ts", f"{'/' * 2} This comment has a semicolon{SEMICOLON} replace it."),
+            ("script.sh", f"echo $# # real comment{SEMICOLON} here\n"),
         )
         for path, content in cases:
             self.assertTrue(run_hook("Write", {"file_path": path, "content": content}))
@@ -102,8 +107,10 @@ class HumanizeTest(unittest.TestCase):
                 f"*** Begin Patch\n*** Update File: {path}\n@@\n ```\n"
                 f"-Old sentence.\n+New{SEMICOLON} sentence.\n*** End Patch"
             )
+            moved_patch = prose_patch.replace("\n@@", f"\n*** Move to: {path.with_name('NOTES.md')}\n@@")
             self.assertEqual(run_hook("apply_patch", {"command": code_patch}), "")
             self.assertIn(f"{path}:5:4", run_hook("apply_patch", {"command": prose_patch}))
+            self.assertIn(f"{path.with_name('NOTES.md')}:5:4", run_hook("apply_patch", {"command": moved_patch}))
 
     def test_skips_unreadable_patch_blocks_and_checks_remaining_files(self):
         """Leave invalid patches to the host and still scan readable files."""
@@ -171,34 +178,27 @@ class HumanizeTest(unittest.TestCase):
         for tool, tool_input, source in cases:
             self.assertIn(source, run_hook(tool, tool_input))
 
-    def test_checks_github_close_comments_from_shell_tools(self):
-        """Check close comments from Claude and Codex shell calls."""
-        cases = (
-            ("Bash", {"command": f'gh pr close 106 --comment "Old{SEMICOLON} new"'}),
-            ("exec_command", {"cmd": f'gh issue close 105 -c "Fixed{SEMICOLON} thanks"'}),
-        )
-        for tool, tool_input in cases:
-            self.assertIn("semicolon at GitHub comment:1:", run_hook(tool, tool_input))
+    def test_checks_github_close_comments(self):
+        """Check close comments from shell calls."""
+        for command in (
+            f'gh pr close 106 --comment "Old{SEMICOLON} new"',
+            f'gh issue close 105 -c "Fixed{SEMICOLON} thanks"',
+        ):
+            self.assertIn("semicolon at GitHub comment:1:", run_hook("Bash", {"command": command}))
         self.assertEqual(run_hook("Bash", {"command": "gh pr review 106 -c"}), "")
         self.assertEqual(run_hook("Bash", {"command": "gh pr close 106 && gh pr review 106 -c"}), "")
-        self.assertEqual(run_hook("exec_command", {"cmd": "git status --short"}), "")
 
     def test_checks_review_json_files(self):
-        """Check nested review bodies from JSON files in both shell tools."""
+        """Check nested review bodies from JSON files."""
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "review payload.json"
             path.write_text(json.dumps({"comments": [{"body": f"First{SEMICOLON} second"}]}))
-            for tool, field in (("Bash", "command"), ("exec_command", "cmd")):
-                for flag in (
-                    f"--input {shlex.quote(path.name)}",
-                    f"--input={shlex.quote(path.name)}",
-                ):
-                    reason = run_hook(
-                        tool,
-                        {field: f"gh api repos/o/r/pulls/1/reviews {flag}"},
-                        directory,
-                    )
-                    self.assertIn(f"{path} (body):1:6", reason)
+            for flag in (
+                f"--input {shlex.quote(path.name)}",
+                f"--input={shlex.quote(path.name)}",
+            ):
+                reason = run_hook("Bash", {"command": f"gh api repos/o/r/pulls/1/reviews {flag}"}, directory)
+                self.assertIn(f"{path} (body):1:6", reason)
             path.write_text(
                 json.dumps(
                     {
@@ -225,7 +225,7 @@ class HumanizeTest(unittest.TestCase):
                 f"api repos/o/r/pulls/comments/1 -F body=@'{path}'",
                 f"api graphql --field=body=@'{path}'",
             ):
-                self.assertIn(f"{path}:1:6", run_hook("exec_command", {"cmd": f"gh {args}"}))
+                self.assertIn(f"{path}:1:6", run_hook("Bash", {"command": f"gh {args}"}))
             self.assertEqual(run_hook("Bash", {"command": f"gh api graphql -f body=@'{path}'"}), "")
             path.write_text("Use `run();` here")
             self.assertEqual(run_hook("Bash", {"command": f"gh pr create --body-file '{path}'"}), "")

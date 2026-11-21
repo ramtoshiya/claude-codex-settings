@@ -1,6 +1,6 @@
 # Installation Guide
 
-Installation guide for Claude Code, OpenAI Codex, Cursor, Gemini CLI, dependencies, and this configuration.
+Installation guide for Claude Code, OpenAI Codex, Cursor, Antigravity CLI, dependencies, and this configuration.
 
 > Use the [plugin marketplace](README.md#installation) to install agents/commands/hooks/MCP. You'll still need to complete prerequisites and set up the shared guidance file.
 
@@ -62,7 +62,7 @@ Optionally install IDE extension:
 claude plugin marketplace add fcakyon/claude-codex-settings
 
 # Install any plugin by name
-claude plugin install simplify@claude-settings
+claude plugin install humanize@claude-settings
 ```
 
 In Claude Code desktop, select **+** beside the prompt, then **Plugins** and **Add plugin**.
@@ -83,27 +83,46 @@ In the Codex desktop app, open **Plugins**, find the plugin, and select **Instal
 
 ```bash
 # Add marketplace (one time)
-cursor-agent plugin marketplace add https://github.com/fcakyon/claude-codex-settings
+agent plugin marketplace add https://github.com/fcakyon/claude-codex-settings
 
 # Start the interactive CLI
-cursor-agent
+agent
 ```
 
 Enter `/plugin`, open the marketplace, and install the plugin at user or project scope. In the Cursor app, open **Customize** and select **Install**.
 
-### Gemini CLI
+### Antigravity CLI
 
-Install Gemini CLI:
-
-```bash
-npm install -g @anthropic-ai/gemini-cli
-```
-
-Install individual plugins:
+Install Antigravity CLI:
 
 ```bash
-gemini extensions install --path ./plugins/simplify
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+agy --version
 ```
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then use the repository installer:
+
+```bash
+git clone https://github.com/fcakyon/claude-codex-settings.git
+cd claude-codex-settings
+uv run .github/scripts/antigravity.py sync
+```
+
+To install a single plugin instead:
+
+```bash
+uv run .github/scripts/antigravity.py install simplify
+```
+
+`sync` installs the curated plugins and merges [`.gemini/config/config.json`](.gemini/config/config.json) and [`.gemini/antigravity-cli/settings.json`](.gemini/antigravity-cli/settings.json) into `~/.gemini` while keeping local plugins and `trustedWorkspaces`. Point `~/.gemini/config/AGENTS.md` at `~/.claude/CLAUDE.md` so Antigravity loads the shared user guidance:
+
+```bash
+ln -sfn ~/.claude/CLAUDE.md ~/.gemini/config/AGENTS.md
+```
+
+The installer builds native Antigravity bundles from the shared skills and MCP servers, then calls `agy plugin install`. It keeps full instructions when a skill exceeds Antigravity's 24 KB loading limit. Shell and file-edit hooks, such as the commit message checks and the humanize word check, come along and block the same commands and writes. Agents, commands, output styles, and Claude-only hooks are not part of these bundles. Plugins without skills or MCP servers are unavailable in Antigravity. Start a new session and use `/simplify`, `/seo-audit`, or another installed skill.
+
+Codex and Cursor also accept the portable [Agent Plugins format](https://agent-plugins.org/). Their marketplace files and existing hook and agent settings differ, so this repo shares source content and generates tool-specific metadata instead of treating the APIs as identical.
 
 ### Required Tools
 
@@ -143,15 +162,20 @@ rm gh.tar.gz
 
 ### Code Quality Tools
 
-```bash
-# Python formatting (required for Python hook)
-uv tool install ruff
+The ultralytics-dev format hook runs the Ultralytics Actions formatters. uv fetches ultralytics-actions and its ruff and npx fetches Prettier and Biome on first use, so the first formatted file needs network access. Shell scripts need shfmt.
 
-# Prettier for JS/TS/CSS/JSON/YAML/HTML/Markdown/Shell formatting (required for prettier hooks)
-npm install -g prettier@3.6.2 prettier-plugin-sh
+```bash
+# macOS
+brew install uv node shfmt
+
+# Linux: install Node.js with your package manager, then uv and a local shfmt binary
+curl -LsSf https://astral.sh/uv/install.sh | sh
+mkdir -p ~/.local/bin
+curl -Lo ~/.local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64
+chmod +x ~/.local/bin/shfmt
 ```
 
-> Verify both are on PATH: `ruff --version && npx prettier --version`. The Python, prettier, and bash hooks exit without a message when a tool is missing, so nothing gets formatted and nothing warns you.
+> Verify all three are on PATH: `uvx --version && npx --version && shfmt --version`. The hook skips a formatter whose tool is missing, so nothing gets formatted and nothing warns you.
 
 ## Post-Installation Setup
 
@@ -161,7 +185,6 @@ Start from [`.claude/CLAUDE.md`](https://github.com/fcakyon/claude-codex-setting
 
 ```bash
 ln -sfn CLAUDE.md AGENTS.md
-ln -sfn CLAUDE.md GEMINI.md
 ```
 
-This lets tools like [OpenAI Codex](https://openai.com/codex/), [Gemini CLI](https://github.com/google-gemini/gemini-cli), [Cursor](https://cursor.com), [Github Copilot](https://github.com/features/copilot) and [Qwen Code](https://github.com/QwenLM/qwen-code) reuse the same instructions.
+This lets tools like [OpenAI Codex](https://openai.com/codex/), [Antigravity CLI](https://antigravity.google/docs/getting-started), [Cursor](https://cursor.com), [Github Copilot](https://github.com/features/copilot) and [Qwen Code](https://github.com/QwenLM/qwen-code) reuse the same instructions.

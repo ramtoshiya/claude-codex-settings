@@ -1,0 +1,10 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "humanize",
+  "version": "1.2.11",
+  "description": "Write naturally and warn about AI buzzwords without blocking files, commits, or messages.",
+  "author": {
+    "name": "Fatih C. Akyon"
+  },
+  "license": "Apache-2.0"
+}

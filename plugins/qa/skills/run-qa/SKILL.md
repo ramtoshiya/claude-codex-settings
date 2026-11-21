@@ -1,0 +1,22 @@
+---
+name: run-qa
+description: This skill should be used when user asks to "run QA", "verify real playback", "test provider connections", "test mobile touch gestures", or "check website, extension, Android or native macOS flows" with tracked journeys.
+---
+
+# Run project QA
+
+Read `.agents/skills/qa/SKILL.md` and `.agents/qa/config.json`, then run `project-qa run --root <repo>`. If absent, use setup. `--filter <id-substring>` limits a follow-up run and repeats, so run a fixed CI case list with one `--filter` per case in one invocation. `--base-url <url>` selects a temporary website target without editing project settings. Check `report.json` for the effective `baseUrl`, tested revision and `selected` cases, then confirm the browser destination; API and auth URLs remain separately configured.
+
+Select existing journeys from the changed behavior, including shared controls and their backend effects. For a commit, `run --verification` emits one lowercase trailer with each executed case and its status. Use the report to summarize the selected journey, its environment and its observed outcome from the final candidate. For a release, run any checks that depend on the actual deployed or installed version there. [Claude Code team's verification practices](https://claude.dev/blog/how-the-claude-code-team-thinks-about-verification)
+
+Use deterministic scripts. Interactive investigation can repair a failed journey, then put repeatable steps in its tracked suite. Never replace failed live behavior with mocked success.
+
+Before claiming native coverage, verify the macOS job executed the actual Swift owner suite and app self-test on this commit. Linux adapter and browser pairing results do not exercise the native coordinator. Use `qa.swiftTests(result, {selfTest: true})` for a project command result or the shared macOS test CLI, and reject zero tests, failed runs and skips.
+
+Reports distinguish pass, fail and blocked, record Git revision, and keep screenshots private. Exit 0 means selected cases passed, 1 means failure, 2 means blocked. Start a fix from the failure details the runner prints and records, listed in the Runner API. When several journeys fail together, fix the first one, since later ones often share its cause. Report omitted cases and configured gaps separately. A passing journey proves its assertions, not uninspected visual quality or runtime health. Mouse or tap-only journeys do not prove touch holds, drags or scrolling. For a UI audit, use the installed `ui-regression` skill when available and report functional, rendered-quality and runtime verdicts separately.
+
+Read [sessions](../../references/sessions.md) before recovering login, [telemetry](../../references/telemetry.md) before production traffic, [voice](../../references/voice.md) before microphone or speech journeys, and [surface requirements](../../references/surfaces.md) for relevant components. [Runner API](../../references/runner.md) defines executable cases and optional browser-network-cli diagnostics, including installation when needed.
+
+Verify cleanup of created data and tabs. Keep saved sessions for the next run. Do not close personal browser tabs, log out providers after each test, or run suites sharing a `stateGroup` concurrently. Parallel runs each need their own server port and `QA_STATE_DIR`.
+
+For native macOS permission onboarding, read [the native workflow](../../references/macos.md) and complete its capture-readiness steps before GUI work. The agent must inspect real journey screenshots before claiming UI acceptance. Ask the user only for an OS action they must perform. The shared driver supplies exact AX window selection, native mouse input and scoped captures. Projects own selectors and app outcomes. Run nonmutating protocol and signed-fixture checks in CI, with installed grants only in a separately authorized manual-live run.

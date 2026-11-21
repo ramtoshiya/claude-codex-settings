@@ -9,11 +9,11 @@ on:
       - ".codex-plugin/**"
       - ".cursor-plugin/**"
       - ".agents/**"
+      - ".gemini/**"
       - ".github/scripts/**"
       - ".github/workflows/validate-plugins.yml"
       - "CLAUDE.md"
       - "AGENTS.md"
-      - "GEMINI.md"
   pull_request:
     branches: [main]
     paths:
@@ -22,11 +22,11 @@ on:
       - ".codex-plugin/**"
       - ".cursor-plugin/**"
       - ".agents/**"
+      - ".gemini/**"
       - ".github/scripts/**"
       - ".github/workflows/validate-plugins.yml"
       - "CLAUDE.md"
       - "AGENTS.md"
-      - "GEMINI.md"
 
 jobs:
   validate:
@@ -46,13 +46,58 @@ jobs:
         with:
           node-version: 22
 
+      - uses: astral-sh/setup-uv@v7
+
       - name: Install dependencies
-        run: pip install pyyaml
+        run: |
+          uv venv
+          uv pip install pyyaml
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install Antigravity CLI
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh -o "$RUNNER_TEMP/install-agy.sh"
+          bash "$RUNNER_TEMP/install-agy.sh" --dir "$RUNNER_TEMP/agy-bin"
+          echo "$RUNNER_TEMP/agy-bin" >> "$GITHUB_PATH"
 
       - name: Validate plugins
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python .github/scripts/validate_plugins.py
+
+      - name: Validate Antigravity bundles
+        run: python .github/scripts/antigravity.py validate
+
+      - name: Install Claude Code and Codex CLIs
+        run: npm install -g @anthropic-ai/claude-code@2.1.330 @openai/codex@0.171.0
+
+      - name: Validate plugins with the Claude Code and Codex CLIs
+        run: python .github/scripts/validate_providers.py
+
+      - name: Verify Chrome skill sync and staged checks
+        run: |
+          bash .github/scripts/sync-modern-web-guidance.sh
+          test -z "$(git status --porcelain -- plugins/modern-web-guidance)"
+          node --test plugins/modern-web-guidance/tests/guidance.test.mjs plugins/github-dev/tests/verify-staged.test.mjs
+
+      - name: Test SEO audit and local packaging
+        run: |
+          npm ci --prefix plugins/seo-skills/skills/seo-audit/scripts --ignore-scripts
+          node --test .github/scripts/test_seo_audit.mjs
+
+      - name: Install SQLite for QA contracts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+
+      - name: Test QA runner and native protocol
+        run: |
+          npm ci --prefix plugins/qa --ignore-scripts
+          chrome=$(command -v google-chrome)
+          QA_BROWSER_EXECUTABLE="$chrome" npm test --prefix plugins/qa
+
+      - name: Test Antigravity reference packaging
+        run: python .github/scripts/test_antigravity.py
 
       - name: Test simplify guard
         run: python .github/scripts/test_simplify_guard.py
@@ -63,5 +108,18 @@ jobs:
       - name: Test visual proof guard
         run: python .github/scripts/test_require_visual_proof.py
 
-      - name: Test commit type guard
-        run: python .github/scripts/test_block_commit_type.py
+      - name: Test commit format guard
+        run: python .github/scripts/test_block_commit_format.py
+
+      - name: Test format hook
+        run: python .github/scripts/test_post_write.py
+
+  qa-macos-contract:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Compile native driver and check disposable signed bundle
+        run: node --test plugins/qa/tests/macos-native.test.mjs

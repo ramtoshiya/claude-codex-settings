@@ -1,6 +1,6 @@
 # Audit checklist
 
-Per-area checks in priority order. The Evidence column says what it takes to verify the check honestly: `fetch` means a single `web_fetch` of the page or file is enough, `tool` means it needs access you don't have, so name it as unchecked rather than asserting it.
+Run `scripts/audit.mjs` from the skill first. Its HTTP checks cover the crawl, metadata, image-delivery, and link checks below within the reported limits. `fetch` means HTTP evidence can establish the fact, sometimes across several URLs. `tool` means another source of evidence is needed. Use available tools before asking for access, and mark missing evidence as unchecked. Guidance sources were reviewed on 2026-11-08.
 
 ## 1. Crawl and index
 
@@ -20,7 +20,7 @@ Per-area checks in priority order. The Evidence column says what it takes to ver
 | Crawl budget, faceted-navigation explosion, parameter duplication | tool: crawler |
 | Orphan pages across the site | tool: crawler |
 
-Soft 404s and near-duplicate clusters need Search Console. A page that returns 200 with no real content is visible from a fetch, so call that out directly.
+The unknown-path probe reports a 200 fallback as a soft-404 candidate. Search Console is needed to confirm Google’s classification. Near-duplicate clusters need content review and a broader crawl.
 
 ## 2. Foundations
 
@@ -40,17 +40,17 @@ Page weight and blocking scripts are partly visible in fetched HTML: a head full
 
 | Check | Target |
 | --- | --- |
-| Title tag | Unique per page, primary keyword near the front, roughly 50 to 60 characters, brand at the end if included |
-| Meta description | Unique, roughly 150 characters or under since mobile truncates near 120, states the value and earns the click. Not a ranking factor |
-| H1 | Exactly one, describes the page, contains the target query or its clear paraphrase |
-| Heading order | H1 then H2 then H3 with no skipped levels, subheads readable as a map of the page |
+| Title tag | Unique per page, primary keyword near the front, descriptive and concise. Google sets no length limit and truncates the title link to fit the device width, so there is no fixed character cutoff. Brand with just the site name at the start or end after a hyphen, colon, or pipe, which Google may leave out when the result already shows it |
+| Meta description | Unique, states the value and earns the click. Google sets no length limit and truncates the snippet to fit the device width. Not a ranking factor |
+| H1 | Describes the page, contains the target query or its clear paraphrase |
+| Heading order | Subheads read as a map of the page. Google says heading order and count do not matter for Search, so report skipped levels as an accessibility fix |
 | Target query | Appears in the first 100 words, naturally, along with the phrasings a reader would actually use |
 | Keyword alignment | Title, H1, URL, and opening all point at the same query |
 | Cannibalization | No other page on the site targets the same query |
 | Internal links | Descriptive anchor text, no "click here", important pages linked more often, no broken links |
 | Images | Descriptive filenames, alt text that describes the image, compressed, modern format, lazy loaded below the fold |
 
-All of the above are fetch-verifiable except cannibalization, which needs either a site-wide crawl or the caller telling you what else exists. Ask.
+Presence, syntax, targets, and exact duplicates are measurable. Relevance, alt-text quality, keyword intent, and cannibalization require interpretation. Do not turn a word count, title-length budget, or a missing raw-HTML heading into a ranking failure.
 
 ## 4. Content quality
 
@@ -75,12 +75,32 @@ Off-page work needs a backlink tool, so treat this as scoping rather than measur
 - Local: inconsistent name, address, and phone across pages, missing LocalBusiness schema, no location pages.
 - Multi-locale: see `international-seo.md`, since the failure modes there are specific and severe.
 
+## Repair context after a script finding
+
+- When metadata appears only in the body, inspect the framework’s streaming behavior. For Next.js, review [streamed metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#streaming-metadata) and [htmlLimitedBots](https://nextjs.org/docs/app/api-reference/config/next-config-js/htmlLimitedBots). Prerender metadata when possible. Blocking metadata for every crawler also delays responses until that work finishes.
+- For missing or stale Next.js share images, inspect [metadata merging](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#merging). A child Open Graph object can replace inherited image metadata. Preserve the page URL, image URL, dimensions, type, and alt text together.
+- Test an unknown content slug on generated image routes. It should return 404 rather than 500. Use the route controls supported by the deployed framework and bundler version.
+- Collapse redirect chains across `http` to `https`, `www` to apex, locale prefixes, and legacy path rewrites into a single permanent hop (`301` or `308`).
+- Put `noindex` and a clean path canonical (or omit canonical on `noindex` utility pages) on auth, setup, or login routes that accept redirect query parameters (such as `/login?returnTo=/`), and add `X-Robots-Tag: noindex` (plus `rel="nofollow"` on internal links) to linked non-HTML utility files like `/llms.txt`, `/docs/*.md`, `/sitemap.xml`, and generated social image routes (`/opengraph-image`, `/twitter-image`).
+- Ensure build-time `metadataBase` and JSON-LD generators resolve the production origin rather than a `localhost` fallback, and audit full sitemaps for duplicate `<loc>` entries or leading-hyphen slugs from empty non-Latin transliteration prefixes.
+- Keep `name="..."` for `description`, `robots`, and `twitter:*` meta tags, `property="..."` for `og:*` tags, and ensure Google favicons have raster icons larger than `48x48` separate from `apple-touch-icon`.
+- Use Search Console CLI and UI for sitemap submission and recrawling, confirming live `Examples` and `FAILED` URLs before starting validation. Do not use retired sitemap ping endpoints, validate intentional redirects or `noindex` pages, validate warnings where listed examples intentionally omit optional schema fields, or bypass external anti-bot challenges.
+- A source date in a sitemap is not evidence of a content change. Google ignores priority and changefreq, and lastmod needs to reflect a real update.
+
 ## Sources
 
 - Google Search Central, Search Essentials: https://developers.google.com/search/docs/essentials
 - Google Search Central, Creating helpful, reliable, people-first content: https://developers.google.com/search/docs/fundamentals/creating-helpful-content
 - Google Search Central, Robots.txt introduction: https://developers.google.com/search/docs/crawling-indexing/robots/intro
 - Google Search Central, Consolidate duplicate URLs: https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls
+- Google Search Central, Influencing title links: https://developers.google.com/search/docs/appearance/title-link
+- Google Search Central, Control your snippets: https://developers.google.com/search/docs/appearance/snippet
+- Google Search Central, SEO Starter Guide: https://developers.google.com/search/docs/fundamentals/seo-starter-guide
 - Google Search Central, Sitemaps overview: https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
 - web.dev, Core Web Vitals: https://web.dev/articles/vitals
 - Google Rich Results Test: https://search.google.com/test/rich-results
+
+- Google Search Central, Generative AI guidance: https://developers.google.com/search/docs/fundamentals/ai-optimization-guide
+- Google Search Central, Robots meta and snippet controls: https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
+- OpenAI crawler roles: https://developers.openai.com/api/docs/bots
+- Perplexity crawler roles: https://docs.perplexity.ai/docs/resources/perplexity-crawlers
