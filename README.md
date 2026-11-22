@@ -349,6 +349,21 @@ Python coding guidelines grounded in authoritative sources: PEP 8, PEP 20 (Zen o
 </details>
 
 <details>
+<summary><strong>swift-skills</strong> - SwiftUI practices for iOS and macOS</summary>
+
+Write and review SwiftUI apps with guidance on accessibility, data flow, navigation and performance.
+
+| Claude Code | Codex CLI | Antigravity CLI |
+| --- | --- | --- |
+| `claude plugin install swift-skills@claude-settings` | `codex plugin add swift-skills@claude-settings` | `uv run .github/scripts/antigravity.py install swift-skills` |
+
+| Skill | What it does | Download |
+| --- | --- | --- |
+| [`swiftui-best-practices`](./plugins/swift-skills/skills/swiftui-best-practices/SKILL.md) | SwiftUI development and review guidance | [ZIP](https://github.com/fcakyon/claude-codex-settings/releases/latest/download/swiftui-best-practices.zip) |
+
+</details>
+
+<details>
 <summary><strong>typescript-skills</strong> - TypeScript type safety and coding practices</summary>
 
 Use practical examples to model types and validate data at application boundaries.
@@ -1247,7 +1262,65 @@ Install this plugin from the marketplace after publication. For a local checkout
 | [setup](./plugins/qa/skills/setup/SKILL.md) | Discover components and build project-specific real journeys |
 | [run-qa](./plugins/qa/skills/run-qa/SKILL.md) | Run tracked journeys and inspect evidence |
 
+Use `qa.mcp` to check connector sign-in metadata, tool calls and interactive view resources over HTTP.
+
 Pairs naturally with `reusable-app-components`.
+
+Pairs naturally with `remote-mcp-skills`.
+
+</details>
+
+<details>
+<summary><strong>remote-mcp-skills</strong> - Build remote MCP servers with account sign-in and interactive views</summary>
+
+| Claude Code | Codex CLI | Cursor | Antigravity CLI |
+| --- | --- | --- | --- |
+| `claude plugin install remote-mcp-skills@claude-settings` | `codex plugin add remote-mcp-skills@claude-settings` | Run `agent`, enter `/plugin`, and install by name | `uv run .github/scripts/antigravity.py install remote-mcp-skills` |
+
+**Skills CLI**
+
+```bash
+npx skills add https://github.com/fcakyon/claude-codex-settings/tree/main/plugins/remote-mcp-skills --skill '*'
+```
+
+Build a connector that works across chat hosts and keeps users connected through deploys.
+
+- Serve MCP tools over stateless HTTP and keep older connector URLs working.
+- Add account sign-in with OAuth and show which account is connected.
+- Package interactive views and diagnose when a host falls back to text.
+
+| Skill | Purpose | ZIP |
+| --- | --- | --- |
+| [`remote-mcp`](./plugins/remote-mcp-skills/skills/remote-mcp/SKILL.md) | Remote transport, OAuth, connector branding and MCP Apps | [![ZIP](https://img.shields.io/badge/⬇%20ZIP-2ea44f?style=flat-square)](https://github.com/fcakyon/claude-codex-settings/releases/latest/download/remote-mcp.zip) |
+
+Pairs naturally with `qa`.
+
+</details>
+
+<details>
+<summary><strong>compliance</strong> - Audit web and OAuth apps for Google CASA Tier 2, OWASP headers, leaks, and privacy</summary>
+
+| Claude Code | Codex CLI | Cursor | Antigravity CLI |
+| --- | --- | --- | --- |
+| `claude plugin install compliance@claude-settings` | `codex plugin add compliance@claude-settings` | Run `agent`, enter `/plugin`, and install by name | `uv run .github/scripts/antigravity.py install compliance` |
+
+**Skills CLI**
+
+```bash
+npx skills add https://github.com/fcakyon/claude-codex-settings/tree/main/plugins/compliance --skill '*'
+```
+
+Run repeatable security, dependency, privacy, and compliance audits before shipping or submitting for third-party assessments.
+
+- Inspect live HTTPS endpoints for HSTS, CSP, framing headers, cookie flags, wildcard CORS, and exposed dotfiles.
+- Run `govulncheck`, `npm audit --omit=dev`, secret scans, encryption/revocation checks, and `Dockerfile` user validation.
+- Reuse weekly OpenShip Actions and GitHub Actions workflows with OWASP ZAP baseline scans.
+
+| Skill | Purpose | ZIP |
+| --- | --- | --- |
+| [`casa-audit`](./plugins/compliance/skills/casa-audit/SKILL.md) | Google CASA Tier 2, OWASP headers, and Limited Use audit | [![ZIP](https://img.shields.io/badge/⬇%20ZIP-2ea44f?style=flat-square)](https://github.com/fcakyon/claude-codex-settings/releases/latest/download/casa-audit.zip) |
+
+Pairs naturally with `qa` and `remote-mcp-skills`.
 
 </details>
 
@@ -1270,6 +1343,7 @@ The test review playbook from [openclaw/openclaw](https://github.com/openclaw/op
 - Before a new test lands, it must name the bug it catches and why existing tests miss it.
 - Finds tests that copy source, mock the behavior they assert, or repeat a stronger test.
 - Deletes test-only exports and dead code once their last test is gone.
+- A bundled script lists candidates first: test-only seams, single-script test files, source greps under build guards, assertion-free or gated tests, and unit mocks that overlap QA journeys.
 - A campaign mode prunes a whole subsystem's tests with a per-test ledger and a final review for lost coverage.
 
 **Skills** (ZIP for claude.ai, Claude Code, Cursor, Codex, VS Code):
@@ -1382,7 +1456,7 @@ Configuration in [`.gemini/config/config.json`](./.gemini/config/config.json) an
 
 - **Mode & Sandbox**: `auto` mode with `proceed-in-sandbox`, terminal sandbox enabled, always-on alt-screen rendering, and desktop notifications
 - **Permissions**: allow rules for selected Git, GitHub CLI, search and developer commands and trusted URLs, plus `deny` rules blocking force pushes and `git rebase`
-- **Plugins**: curated Antigravity-compatible plugin set enabled in `.gemini/config/config.json` (`agent-browser`, `code-review`, `codex-advisor`, `fable-advisor`, `frontend-design-skills`, `github-dev`, `google-telemetry`, `heroui-skills`, `humanize`, `modern-web-guidance`, `openai-office-skills`, `python-skills`, `qa`, `reusable-app-components`, `seo-skills`, `simplify`, `typescript-skills`, `ultralytics-dev`)
+- **Plugins**: curated Antigravity-compatible plugin set enabled in `.gemini/config/config.json` (`agent-browser`, `code-review`, `codex-advisor`, `compliance`, `fable-advisor`, `frontend-design-skills`, `github-dev`, `google-telemetry`, `heroui-skills`, `humanize`, `modern-web-guidance`, `openai-office-skills`, `python-skills`, `qa`, `remote-mcp-skills`, `reusable-app-components`, `seo-skills`, `simplify`, `swift-skills`, `typescript-skills`, `ultralytics-dev`)
 - **Sync**: run `uv run .github/scripts/antigravity.py sync` to install the enabled plugins and merge settings into `~/.gemini` without removing existing local plugins or `trustedWorkspaces`
 
 </details>

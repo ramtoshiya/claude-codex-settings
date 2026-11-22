@@ -9,6 +9,9 @@
     "codex-advisor": {
       "enabled": true
     },
+    "compliance": {
+      "enabled": true
+    },
     "fable-advisor": {
       "enabled": true
     },
@@ -39,6 +42,9 @@
     "qa": {
       "enabled": true
     },
+    "remote-mcp-skills": {
+      "enabled": true
+    },
     "reusable-app-components": {
       "enabled": true
     },
@@ -46,6 +52,9 @@
       "enabled": true
     },
     "simplify": {
+      "enabled": true
+    },
+    "swift-skills": {
       "enabled": true
     },
     "typescript-skills": {

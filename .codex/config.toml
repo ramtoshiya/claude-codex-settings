@@ -125,10 +125,19 @@ enabled = true
 [plugins."qa@claude-settings"]
 enabled = true
 
+[plugins."remote-mcp-skills@claude-settings"]
+enabled = true
+
+[plugins."compliance@claude-settings"]
+enabled = true
+
 [plugins."typescript-skills@claude-settings"]
 enabled = true
 
 [plugins."heroui-skills@claude-settings"]
+enabled = true
+
+[plugins."swift-skills@claude-settings"]
 enabled = true
 
 [plugins."google-telemetry@claude-settings"]

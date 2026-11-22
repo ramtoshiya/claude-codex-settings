@@ -241,9 +241,11 @@
   },
   "enabledPlugins": {
     "heroui-skills@claude-settings": true,
+    "swift-skills@claude-settings": true,
     "typescript-skills@claude-settings": true,
     "reusable-app-components@claude-settings": true,
     "qa@claude-settings": true,
+    "remote-mcp-skills@claude-settings": true,
     "intelligent-compact@claude-settings": false,
     "humanize@claude-settings": true,
     "openai-office-skills@claude-settings": true,
